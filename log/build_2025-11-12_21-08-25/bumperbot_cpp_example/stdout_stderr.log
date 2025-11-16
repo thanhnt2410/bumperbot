@@ -1,0 +1,64 @@
+-- Found ament_cmake: 1.3.12 (/opt/ros/humble/share/ament_cmake/cmake)
+-- Found rclcpp: 16.0.15 (/opt/ros/humble/share/rclcpp/cmake)
+-- Found rosidl_generator_c: 3.1.7 (/opt/ros/humble/share/rosidl_generator_c/cmake)
+-- Found rosidl_adapter: 3.1.7 (/opt/ros/humble/share/rosidl_adapter/cmake)
+-- Found rosidl_generator_cpp: 3.1.7 (/opt/ros/humble/share/rosidl_generator_cpp/cmake)
+-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+-- Found rmw_implementation_cmake: 6.1.2 (/opt/ros/humble/share/rmw_implementation_cmake/cmake)
+-- Found rmw_fastrtps_cpp: 6.2.9 (/opt/ros/humble/share/rmw_fastrtps_cpp/cmake)
+-- Using RMW implementation 'rmw_fastrtps_cpp' as default
+-- Found turtlesim: 1.4.3 (/opt/ros/humble/share/turtlesim/cmake)
+-- Found ament_lint_auto: 0.12.14 (/opt/ros/humble/share/ament_lint_auto/cmake)
+-- Added test 'cppcheck' to perform static code analysis on C / C++ code
+-- Configured cppcheck include dirs: /home/thanh/bumperbot_ws/src/bumperbot_cpp_example/include
+-- Configured cppcheck exclude dirs and/or files: 
+-- Added test 'lint_cmake' to check CMake code style
+-- Added test 'uncrustify' to check C / C++ code style
+-- Configured uncrustify additional arguments: 
+-- Added test 'xmllint' to check XML markup files
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/thanh/bumperbot_ws/build/bumperbot_cpp_example
+[35m[1mConsolidate compiler generated dependencies of target simple_parameter[0m
+[35m[1mConsolidate compiler generated dependencies of target simple_publisher[0m
+[35m[1mConsolidate compiler generated dependencies of target simple_subscriber[0m
+[ 12%] [32mBuilding CXX object CMakeFiles/simple_turtlesim_kinematics.dir/src/simple_turtlesim_kinematics.cpp.o[0m
+[ 25%] [32mBuilding CXX object CMakeFiles/simple_publisher.dir/src/simple_publisher.cpp.o[0m
+[ 37%] [32mBuilding CXX object CMakeFiles/simple_parameter.dir/src/simple_parameter.cpp.o[0m
+[ 50%] [32mBuilding CXX object CMakeFiles/simple_subscriber.dir/src/simple_subscriber.cpp.o[0m
+[ 62%] [32m[1mLinking CXX executable simple_parameter[0m
+[ 62%] Built target simple_parameter
+[ 75%] [32m[1mLinking CXX executable simple_publisher[0m
+[ 75%] Built target simple_publisher
+[ 87%] [32m[1mLinking CXX executable simple_subscriber[0m
+[100%] [32m[1mLinking CXX executable simple_turtlesim_kinematics[0m
+[100%] Built target simple_subscriber
+[100%] Built target simple_turtlesim_kinematics
+-- Install configuration: ""
+-- Installing: /home/thanh/bumperbot_ws/install/bumperbot_cpp_example/include/include
+-- Installing: /home/thanh/bumperbot_ws/install/bumperbot_cpp_example/include/include/bumperbot_cpp_example
+-- Installing: /home/thanh/bumperbot_ws/install/bumperbot_cpp_example/include/include/bumperbot_cpp_example/simple_turtlesim_kinematics.hpp
+-- Installing: /home/thanh/bumperbot_ws/install/bumperbot_cpp_example/lib/bumperbot_cpp_example/simple_publisher
+-- Set runtime path of "/home/thanh/bumperbot_ws/install/bumperbot_cpp_example/lib/bumperbot_cpp_example/simple_publisher" to ""
+-- Installing: /home/thanh/bumperbot_ws/install/bumperbot_cpp_example/lib/bumperbot_cpp_example/simple_subscriber
+-- Set runtime path of "/home/thanh/bumperbot_ws/install/bumperbot_cpp_example/lib/bumperbot_cpp_example/simple_subscriber" to ""
+-- Installing: /home/thanh/bumperbot_ws/install/bumperbot_cpp_example/lib/bumperbot_cpp_example/simple_parameter
+-- Set runtime path of "/home/thanh/bumperbot_ws/install/bumperbot_cpp_example/lib/bumperbot_cpp_example/simple_parameter" to ""
+-- Installing: /home/thanh/bumperbot_ws/install/bumperbot_cpp_example/lib/bumperbot_cpp_example/simple_turtlesim_kinematics
+-- Set runtime path of "/home/thanh/bumperbot_ws/install/bumperbot_cpp_example/lib/bumperbot_cpp_example/simple_turtlesim_kinematics" to ""
+-- Installing: /home/thanh/bumperbot_ws/install/bumperbot_cpp_example/share/ament_index/resource_index/package_run_dependencies/bumperbot_cpp_example
+-- Up-to-date: /home/thanh/bumperbot_ws/install/bumperbot_cpp_example/share/ament_index/resource_index/parent_prefix_path/bumperbot_cpp_example
+-- Up-to-date: /home/thanh/bumperbot_ws/install/bumperbot_cpp_example/share/bumperbot_cpp_example/environment/ament_prefix_path.sh
+-- Installing: /home/thanh/bumperbot_ws/install/bumperbot_cpp_example/share/bumperbot_cpp_example/environment/ament_prefix_path.dsv
+-- Up-to-date: /home/thanh/bumperbot_ws/install/bumperbot_cpp_example/share/bumperbot_cpp_example/environment/path.sh
+-- Installing: /home/thanh/bumperbot_ws/install/bumperbot_cpp_example/share/bumperbot_cpp_example/environment/path.dsv
+-- Up-to-date: /home/thanh/bumperbot_ws/install/bumperbot_cpp_example/share/bumperbot_cpp_example/local_setup.bash
+-- Up-to-date: /home/thanh/bumperbot_ws/install/bumperbot_cpp_example/share/bumperbot_cpp_example/local_setup.sh
+-- Up-to-date: /home/thanh/bumperbot_ws/install/bumperbot_cpp_example/share/bumperbot_cpp_example/local_setup.zsh
+-- Installing: /home/thanh/bumperbot_ws/install/bumperbot_cpp_example/share/bumperbot_cpp_example/local_setup.dsv
+-- Installing: /home/thanh/bumperbot_ws/install/bumperbot_cpp_example/share/bumperbot_cpp_example/package.dsv
+-- Up-to-date: /home/thanh/bumperbot_ws/install/bumperbot_cpp_example/share/ament_index/resource_index/packages/bumperbot_cpp_example
+-- Up-to-date: /home/thanh/bumperbot_ws/install/bumperbot_cpp_example/share/bumperbot_cpp_example/cmake/bumperbot_cpp_exampleConfig.cmake
+-- Up-to-date: /home/thanh/bumperbot_ws/install/bumperbot_cpp_example/share/bumperbot_cpp_example/cmake/bumperbot_cpp_exampleConfig-version.cmake
+-- Installing: /home/thanh/bumperbot_ws/install/bumperbot_cpp_example/share/bumperbot_cpp_example/package.xml

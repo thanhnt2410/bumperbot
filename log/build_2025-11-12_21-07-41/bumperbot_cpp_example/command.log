@@ -1,0 +1,2 @@
+Invoking command in '/home/thanh/bumperbot_ws/build/bumperbot_cpp_example': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /home/thanh/bumperbot_ws/build/bumperbot_cpp_example -- -j16 -l16
+Invoked command in '/home/thanh/bumperbot_ws/build/bumperbot_cpp_example' returned '2': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /home/thanh/bumperbot_ws/build/bumperbot_cpp_example -- -j16 -l16

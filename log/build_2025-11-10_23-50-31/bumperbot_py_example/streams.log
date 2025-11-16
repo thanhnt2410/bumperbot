@@ -1,0 +1,45 @@
+[0.390s] Invoking command in '/home/thanh/bumperbot_ws/src/bumperbot_py_example': PYTHONPATH=/home/thanh/bumperbot_ws/build/bumperbot_py_example/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/thanh/bumperbot_ws/install/bumperbot_py_example/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/bumperbot_py_example build --build-base /home/thanh/bumperbot_ws/build/bumperbot_py_example/build install --record /home/thanh/bumperbot_ws/build/bumperbot_py_example/install.log --single-version-externally-managed install_data
+[0.543s] running egg_info
+[0.543s] creating ../../build/bumperbot_py_example/bumperbot_py_example.egg-info
+[0.543s] writing ../../build/bumperbot_py_example/bumperbot_py_example.egg-info/PKG-INFO
+[0.543s] writing dependency_links to ../../build/bumperbot_py_example/bumperbot_py_example.egg-info/dependency_links.txt
+[0.543s] writing entry points to ../../build/bumperbot_py_example/bumperbot_py_example.egg-info/entry_points.txt
+[0.543s] writing requirements to ../../build/bumperbot_py_example/bumperbot_py_example.egg-info/requires.txt
+[0.543s] writing top-level names to ../../build/bumperbot_py_example/bumperbot_py_example.egg-info/top_level.txt
+[0.544s] writing manifest file '../../build/bumperbot_py_example/bumperbot_py_example.egg-info/SOURCES.txt'
+[0.544s] reading manifest file '../../build/bumperbot_py_example/bumperbot_py_example.egg-info/SOURCES.txt'
+[0.545s] writing manifest file '../../build/bumperbot_py_example/bumperbot_py_example.egg-info/SOURCES.txt'
+[0.545s] running build
+[0.545s] running build_py
+[0.545s] creating /home/thanh/bumperbot_ws/build/bumperbot_py_example/build
+[0.545s] creating /home/thanh/bumperbot_ws/build/bumperbot_py_example/build/lib
+[0.545s] creating /home/thanh/bumperbot_ws/build/bumperbot_py_example/build/lib/bumperbot_py_example
+[0.545s] copying bumperbot_py_example/simple_parameter.py -> /home/thanh/bumperbot_ws/build/bumperbot_py_example/build/lib/bumperbot_py_example
+[0.545s] copying bumperbot_py_example/simple_publisher.py -> /home/thanh/bumperbot_ws/build/bumperbot_py_example/build/lib/bumperbot_py_example
+[0.545s] copying bumperbot_py_example/__init__.py -> /home/thanh/bumperbot_ws/build/bumperbot_py_example/build/lib/bumperbot_py_example
+[0.545s] copying bumperbot_py_example/simple_subscriber.py -> /home/thanh/bumperbot_ws/build/bumperbot_py_example/build/lib/bumperbot_py_example
+[0.545s] running install
+[0.545s] running install_lib
+[0.546s] creating /home/thanh/bumperbot_ws/install/bumperbot_py_example/lib/python3.10/site-packages/bumperbot_py_example
+[0.546s] copying /home/thanh/bumperbot_ws/build/bumperbot_py_example/build/lib/bumperbot_py_example/simple_parameter.py -> /home/thanh/bumperbot_ws/install/bumperbot_py_example/lib/python3.10/site-packages/bumperbot_py_example
+[0.546s] copying /home/thanh/bumperbot_ws/build/bumperbot_py_example/build/lib/bumperbot_py_example/simple_publisher.py -> /home/thanh/bumperbot_ws/install/bumperbot_py_example/lib/python3.10/site-packages/bumperbot_py_example
+[0.546s] copying /home/thanh/bumperbot_ws/build/bumperbot_py_example/build/lib/bumperbot_py_example/__init__.py -> /home/thanh/bumperbot_ws/install/bumperbot_py_example/lib/python3.10/site-packages/bumperbot_py_example
+[0.546s] copying /home/thanh/bumperbot_ws/build/bumperbot_py_example/build/lib/bumperbot_py_example/simple_subscriber.py -> /home/thanh/bumperbot_ws/install/bumperbot_py_example/lib/python3.10/site-packages/bumperbot_py_example
+[0.546s] byte-compiling /home/thanh/bumperbot_ws/install/bumperbot_py_example/lib/python3.10/site-packages/bumperbot_py_example/simple_parameter.py to simple_parameter.cpython-310.pyc
+[0.547s] byte-compiling /home/thanh/bumperbot_ws/install/bumperbot_py_example/lib/python3.10/site-packages/bumperbot_py_example/simple_publisher.py to simple_publisher.cpython-310.pyc
+[0.547s] byte-compiling /home/thanh/bumperbot_ws/install/bumperbot_py_example/lib/python3.10/site-packages/bumperbot_py_example/__init__.py to __init__.cpython-310.pyc
+[0.547s] byte-compiling /home/thanh/bumperbot_ws/install/bumperbot_py_example/lib/python3.10/site-packages/bumperbot_py_example/simple_subscriber.py to simple_subscriber.cpython-310.pyc
+[0.547s] running install_data
+[0.547s] creating /home/thanh/bumperbot_ws/install/bumperbot_py_example/share/ament_index
+[0.547s] creating /home/thanh/bumperbot_ws/install/bumperbot_py_example/share/ament_index/resource_index
+[0.547s] creating /home/thanh/bumperbot_ws/install/bumperbot_py_example/share/ament_index/resource_index/packages
+[0.547s] copying resource/bumperbot_py_example -> /home/thanh/bumperbot_ws/install/bumperbot_py_example/share/ament_index/resource_index/packages
+[0.547s] copying package.xml -> /home/thanh/bumperbot_ws/install/bumperbot_py_example/share/bumperbot_py_example
+[0.547s] running install_egg_info
+[0.548s] Copying ../../build/bumperbot_py_example/bumperbot_py_example.egg-info to /home/thanh/bumperbot_ws/install/bumperbot_py_example/lib/python3.10/site-packages/bumperbot_py_example-0.0.0-py3.10.egg-info
+[0.549s] running install_scripts
+[0.562s] Installing simple_parameter script to /home/thanh/bumperbot_ws/install/bumperbot_py_example/lib/bumperbot_py_example
+[0.562s] Installing simple_publisher script to /home/thanh/bumperbot_ws/install/bumperbot_py_example/lib/bumperbot_py_example
+[0.562s] Installing simple_subscriber script to /home/thanh/bumperbot_ws/install/bumperbot_py_example/lib/bumperbot_py_example
+[0.562s] writing list of installed files to '/home/thanh/bumperbot_ws/build/bumperbot_py_example/install.log'
+[0.578s] Invoked command in '/home/thanh/bumperbot_ws/src/bumperbot_py_example' returned '0': PYTHONPATH=/home/thanh/bumperbot_ws/build/bumperbot_py_example/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/thanh/bumperbot_ws/install/bumperbot_py_example/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/bumperbot_py_example build --build-base /home/thanh/bumperbot_ws/build/bumperbot_py_example/build install --record /home/thanh/bumperbot_ws/build/bumperbot_py_example/install.log --single-version-externally-managed install_data
