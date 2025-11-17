@@ -2,6 +2,9 @@ build/
 devel/
 install/
 log/
+src/build/
+src/install/
+src/log/
 .catkin_workspace
 .vscode
 **/__pycache__/
