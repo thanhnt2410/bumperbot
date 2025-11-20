@@ -1,19 +1,27 @@
 {
-    "configurations": [
-        {
-            "name": "Linux",
-            "includePath": [
-                "${workspaceFolder}/**",
-                "/opt/ros/humble/include/**",
-                
-                "${workspaceFolder}/src/**"
-            ],
-            "defines": [],
-            "compilerPath": "/usr/bin/gcc",
-            "cStandard": "c17",
-            "cppStandard": "gnu++17",
-            "intelliSenseMode": "linux-gcc-x64"
-        }
-    ],
-    "version": 4
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${workspaceFolder}/.vscode/browse.vc.db",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/thanh/bumperbot_ws/install/bumperbot_msgs/include/**",
+        "/home/thanh/bumperbot_ws/install/bumperbot_cpp_example/include/**",
+        "/home/thanh/bumperbot_ws/install/bumperbot_controller/include/**",
+        "/opt/ros/humble/include/**",
+        "/home/thanh/bumperbot_ws/src/bumperbot_controller/include/**",
+        "/home/thanh/bumperbot_ws/src/bumperbot_cpp_example/include/**",
+        "/home/thanh/bumperbot_ws/src/bumperbot_description/include/**",
+        "/home/thanh/bumperbot_ws/src/bumperbot_msgs/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ros2",
+      "intelliSenseMode": "linux-gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "c17",
+      "cppStandard": "gnu++17"
+    }
+  ],
+  "version": 4
 }
