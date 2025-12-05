@@ -47,6 +47,7 @@ install(
 install(PROGRAMS
   ${PROJECT_NAME}/simple_controller.py
   ${PROJECT_NAME}/noisy_controller.py
+  ${PROJECT_NAME}/Twist_2_TwistStamped.py
   DESTINATION lib/${PROJECT_NAME}/
 )
 
