@@ -1,4 +1,4 @@
-#!usr/bin/env python3
+#!/usr/bin/env python3
 
 import rclpy
 from rclpy.node import Node
@@ -47,7 +47,7 @@ class OdometryMotionModel(Node):
 
         if self.nr_samples >= 0:
             self.samples = PoseArray()
-            self.nr_samples.poses = [Pose() for _ in range(self.nr_samples)]
+            self.samples.poses = [Pose() for _ in range(self.nr_samples)]
         else:
             self.get_logger().fatal("Invalid number of sample requested: %d", self.nr_samples)
             return
@@ -57,7 +57,7 @@ class OdometryMotionModel(Node):
 
     def OdomCallback(self, odom):
         q = [odom.pose.pose.orientation.x, odom.pose.pose.orientation.y, 
-             odom.pose.pose.orientation.w]
+             odom.pose.pose.orientation.z, odom.pose.pose.orientation.w]
         roll, pitch , yaw = euler_from_quaternion(q)
 
         if self.is_first_odom:
@@ -77,8 +77,10 @@ class OdometryMotionModel(Node):
         if sqrt(pow(odom_y_increment, 2) + pow(odom_x_increment, 2)) < 0.01:
             delta_rot1 = 0.0
         else:
-            delta_rot1 = angle_diff(atan2(odom_y_increment. odom_x_increment), yaw)
+            delta_rot1 = angle_diff(atan2(odom_y_increment, odom_x_increment), yaw)
         delta_trasl = sqrt(pow(odom_y_increment, 2) + pow(odom_x_increment, 2))
+        if odom_x_increment < 0:
+            delta_trasl *= -1.0
         delta_rot2 = angle_diff(odom_theta_increment, delta_rot1)
 
         # Noise Model that affects the Motion Model

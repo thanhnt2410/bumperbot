@@ -89,6 +89,10 @@ void OdometryMotionModel::OdomCallback(const nav_msgs::msg::Odometry &odom)
             delta_rot1 = angle_diff(atan2(odom_y_increment, odom_x_increment), yaw);
         }
         double delta_trasl = sqrt(std::pow(odom_y_increment, 2) + std::pow(odom_x_increment, 2));
+        // Determine forward or backward
+        double is_forward = (odom_x_increment * cos(last_odom_theta_) + odom_y_increment * sin(last_odom_theta_)) >= 0.0;
+        delta_trasl = (is_forward)? delta_trasl: -delta_trasl;
+        
         double delta_rot2 = angle_diff(odom_theta_increment, delta_rot1);
 
         double rot1_variance = alpha1_ * delta_rot1 + alpha2_ * delta_trasl;
