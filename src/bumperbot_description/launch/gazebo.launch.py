@@ -43,7 +43,7 @@ def generate_launch_description():
         package="robot_state_publisher",
         executable="robot_state_publisher",
         parameters=[{"robot_description": robot_description,
-                     "use_sim_time": True}]
+                     "use_sim_time": False}]
     )
 
     gazebo = IncludeLaunchDescription(
@@ -69,7 +69,8 @@ def generate_launch_description():
         executable="parameter_bridge",
         arguments=[
             "/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock",
-            "/imu@sensor_msgs/msg/Imu[gz.msgs.IMU"
+            "/imu@sensor_msgs/msg/Imu[gz.msgs.IMU",
+            "/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan",
         ],
         remappings=[
             ('/imu', '/imu/out'),
