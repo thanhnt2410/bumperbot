@@ -31,15 +31,15 @@ def generate_launch_description():
         os.path.join(
             get_package_share_directory("twist_mux"),
             "launch",
-            "twist_mux.launch.py",
+            "twist_mux_launch.py"
         ),
         launch_arguments={
             "cmd_vel_out": "bumperbot_controller/cmd_vel_unstamped",
-            "config_topic":os.path.join(bumperbot_controller_pkg, "config", "twist_mux_topics.yaml"),
-            "config_lock":os.path.join(bumperbot_controller_pkg, "config", "twist_mux_lock.yaml"),
-            "config_joy":os.path.join(bumperbot_controller_pkg, "config", "twist_mux_joy.yaml"),
+            "config_locks": os.path.join(bumperbot_controller_pkg, "config", "twist_mux_locks.yaml"),
+            "config_topics": os.path.join(bumperbot_controller_pkg, "config", "twist_mux_topics.yaml"),
+            "config_joy": os.path.join(bumperbot_controller_pkg, "config", "twist_mux_joy.yaml"),
             "use_sim_time": LaunchConfiguration("use_sim_time"),
-        }.items()
+        }.items(),
     )
 
     twist_relay_node = Node(

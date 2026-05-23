@@ -1,16 +1,34 @@
 #!/usr/bin/env python3
 
-from geometry_msgs.msg import Twist, TwistStamped
 import rclpy
 from rclpy.node import Node
+from geometry_msgs.msg import Twist, TwistStamped
 
-class TwistRelay(Node):
+class TwistRelayNode(Node):
     def __init__(self):
-        super().__init__('twist_to_stamped')
-        self.controller_sub = self.create_subscription(Twist, '/bumperbot_controller/cmd_vel_unstamped', self.controller_twist_callback, 10)
-        self.controller_pub = self.create_publisher(TwistStamped, 'bumperbot_controller/cmd_vel', 10)
-        self.joy_sub = self.create_subscription(Twist, '/input_joy/cmd_vel_stamped', self.joy_twist_callback, 10)
-        self.joy_pub = self.create_publisher(TwistStamped, '/input_joy/cmd_vel', 10)
+        super().__init__("twist_relay")
+        self.controller_sub = self.create_subscription(
+            Twist,
+            "/bumperbot_controller/cmd_vel_unstamped",
+            self.controller_twist_callback,
+            10
+        )
+        self.controller_pub = self.create_publisher(
+            TwistStamped,
+            "/bumperbot_controller/cmd_vel",
+            10
+        )
+        self.joy_sub = self.create_subscription(
+            TwistStamped,
+            "/input_joy/cmd_vel_stamped",
+            self.joy_twist_callback,
+            10
+        )
+        self.joy_pub = self.create_publisher(
+            Twist,
+            "/input_joy/cmd_vel",
+            10
+        )
 
     def controller_twist_callback(self, msg):
         twist_stamped = TwistStamped()
@@ -23,12 +41,12 @@ class TwistRelay(Node):
         twist = msg.twist
         self.joy_pub.publish(twist)
 
-def main():
-    rclpy.init()
-    node = TwistRelay()
+def main(args=None):
+    rclpy.init(args=args)
+    node = TwistRelayNode()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

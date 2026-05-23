@@ -149,6 +149,6 @@ def generate_launch_description():
             wheel_controller_spawner,
             simple_controller,
             noisy_controller_launch,
-            twist_2_stamped
+            # twist_2_stamped
         ]
     )
