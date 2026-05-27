@@ -19,6 +19,7 @@
   <depend>tf2</depend>
   <depend>geometry_msgs</depend>
   <depend>bumperbot_msgs</depend>
+  <depend>rclcpp_lifecycle</depend>
   
 
   <test_depend>ament_lint_auto</test_depend>

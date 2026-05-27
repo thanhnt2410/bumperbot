@@ -33,6 +33,7 @@ setup(
             'simple_service_client = bumperbot_py_example.simple_service_client:main',
             'simple_action_server = bumperbot_py_example.simple_action_server:main',
             'simple_action_client = bumperbot_py_example.simple_action_client:main',
+            'simple_lifecycle_node = bumperbot_py_example.simple_lifecycle_node:main',
             
         ],
     },
