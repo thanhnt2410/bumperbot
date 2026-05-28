@@ -103,6 +103,12 @@ rclcpp_components_register_node(simple_action_client
 
 )
 
+add_executable(simple_qos_publisher src/simple_qos_publisher.cpp)
+ament_target_dependencies(simple_qos_publisher rclcpp std_msgs)
+
+add_executable(simple_qos_subscriber src/simple_qos_subscriber.cpp)
+ament_target_dependencies(simple_qos_subscriber rclcpp std_msgs)
+
 install(
   DIRECTORY include
   DESTINATION include 
@@ -116,6 +122,8 @@ install(TARGETS
         simple_service_server
         simple_service_client
         simple_lifecycle_node
+        simple_qos_publisher
+        simple_qos_subscriber
         DESTINATION lib/${PROJECT_NAME})
 
 install(TARGETS 
