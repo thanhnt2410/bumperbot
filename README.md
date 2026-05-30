@@ -6,5 +6,5 @@ Feature developing:
   - Control and simulation in Gazebo
   
 <p align="center">
-  <img src="docs/mapping_demo.gif" width="700">
+  <img src="docs/demo.gif" width="700">
 </p>
