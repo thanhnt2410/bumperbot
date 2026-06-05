@@ -44,6 +44,7 @@ public:
         {
             qos_profile_pub_.durability(RMW_QOS_POLICY_DURABILITY_SYSTEM_DEFAULT);
             RCLCPP_INFO(get_logger(), "[Durability]: System Default");
+            
         }else {
             RCLCPP_ERROR_STREAM(get_logger(), "Selected Durability QoS: "<< durability<<"doesn't exists!");
             return;
