@@ -62,6 +62,7 @@ private:
     bool poseOnMap(const GraphNode & node);
     unsigned int poseToCell(const GraphNode & node);
     double manhattanDistance(const GraphNode & node, const GraphNode & goal_node);
+    
     nav_msgs::msg::Path plan(const geometry_msgs::msg::Pose & start, const geometry_msgs::msg::Pose & goal);
 };
 }
