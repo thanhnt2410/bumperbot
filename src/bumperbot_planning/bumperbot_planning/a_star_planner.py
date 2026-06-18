@@ -35,7 +35,7 @@ class AStarPlanner(Node):
 
         map_qos = QoSProfile(depth=10)
         map_qos.durability = DurabilityPolicy.TRANSIENT_LOCAL
-        self.map_sub = self.create_subscription(OccupancyGrid, "/map", self.map_callback, map_qos)
+        self.map_sub = self.create_subscription(OccupancyGrid, "/costmap/costmap", self.map_callback, map_qos)
         self.pose_sub = self.create_subscription(PoseStamped, "/goal_pose", self.goal_callback, 10)
         self.path_pub = self.create_publisher(Path, "/a_star/path", 10)
         self.map_pub = self.create_publisher(OccupancyGrid, "/a_star/visited_map", 10)
@@ -93,8 +93,8 @@ class AStarPlanner(Node):
                 break
             for dir_x, dir_y in explore_directions:
                 new_node: GraphNode = active_node + (dir_x, dir_y)
-                if new_node not in visited_nodes and self.pose_on_map(new_node) and self.map_.data[self.pose_to_cell(new_node)] == 0:
-                    new_node.cost = active_node.cost + 1
+                if new_node not in visited_nodes and self.pose_on_map(new_node) and 0 <=self.map_.data[self.pose_to_cell(new_node)] < 99:
+                    new_node.cost = active_node.cost + 1 + self.map_.data[self.pose_to_cell(new_node)]
                     new_node.heuristic = self.manhattan_distance(new_node, goal_node)
                     new_node.prev = active_node
                     pending_nodes.put(new_node)
