@@ -6,71 +6,44 @@
 
 namespace bumperbot_planning
 {
-
-AStarPlanner::AStarPlanner() : Node("a_star_node")
+void AStarPlanner::configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent, 
+    std::string name, 
+    std::shared_ptr<tf2_ros::Buffer> tf, std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros)
 {
-    tf_buffer_ = std::make_unique<tf2_ros::Buffer>(get_clock());
-    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+    node_ = parent.lock();
+    name_ = name;
+    tf_ = tf;
+    costmap_ = costmap_ros->getCostmap();
+    global_frame_ = costmap_ros->getGlobalFrameID();
 
-    rclcpp::QoS map_qos(10);
-    map_qos.durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
-    map_sub_ = create_subscription<nav_msgs::msg::OccupancyGrid>(
-        "/costmap/costmap", map_qos, std::bind(&AStarPlanner::mapCallback, this, std::placeholders::_1));
-    pose_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>(
-        "/goal_pose", 10, std::bind(&AStarPlanner::goalCallback, this, std::placeholders::_1));
-    path_pub_ = create_publisher<nav_msgs::msg::Path>(
-        "/a_star/path", 10);
-    map_pub_ = create_publisher<nav_msgs::msg::OccupancyGrid>(
-        "/a_star/visited_map", 10);
-};
-void AStarPlanner::mapCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr map)
-{
-    map_ = map;
-    visited_map_.header.frame_id = map->header.frame_id;
-    visited_map_.info = map->info;
-    visited_map_.data = std::vector<int8_t>(visited_map_.info.height * visited_map_.info.width, -1);
+    smooth_client_ = rclcpp_action::create_client<nav2_msgs::action::SmoothPath>(node_, "smooth_path");
+    if(!smooth_client_->wait_for_action_server(std::chrono::seconds(3))){
+        RCLCPP_ERROR(node_->get_logger(), "Action server not available after waiting");
+    }
 }
-void AStarPlanner::goalCallback(const geometry_msgs::msg::PoseStamped::SharedPtr pose)
+void AStarPlanner::cleanup()
 {
-    if(!map_){
-        RCLCPP_ERROR(get_logger(), "No map received!");
-        return;
-    }
-    visited_map_.data = std::vector<int8_t>(visited_map_.info.height * visited_map_.info.width, -1);
-    geometry_msgs::msg::TransformStamped map_to_base_tf;
-    try{
-        map_to_base_tf = tf_buffer_->lookupTransform(
-            map_->header.frame_id,
-            "base_footprint",
-            tf2::TimePointZero);
-    } catch (const tf2::TransformException &ex){
-        RCLCPP_ERROR(get_logger(), "Could not transform from map to base_footprint");
-        return;
-    }
-
-    geometry_msgs::msg::Pose map_to_base_pose;
-    map_to_base_pose.position.x = map_to_base_tf.transform.translation.x;
-    map_to_base_pose.position.y = map_to_base_tf.transform.translation.y;
-    map_to_base_pose.orientation = map_to_base_tf.transform.rotation;
-
-    auto path = plan(map_to_base_pose, pose->pose);
-    if(!path.poses.empty()){
-        RCLCPP_INFO(get_logger(), "Shortest path found");
-        path_pub_->publish(path);
-    } else {
-        RCLCPP_WARN(get_logger(), "No path found");
-    }
-
+    RCLCPP_INFO(node_->get_logger(), "Cleaning up plugin %s of type AStarPlanner", name_.c_str());
 }
-nav_msgs::msg::Path AStarPlanner::plan(const geometry_msgs::msg::Pose & start, const geometry_msgs::msg::Pose & goal)
+void AStarPlanner::activate(){
+    RCLCPP_INFO(node_->get_logger(), "Activating plugin %s of type AStarPlanner", name_.c_str());
+}
+void AStarPlanner::deactivate(){
+    RCLCPP_INFO(node_->get_logger(), "Deactivating plugin %s of type AStarPlanner", name_.c_str());
+}
+
+nav_msgs::msg::Path AStarPlanner::createPlan(
+    const geometry_msgs::msg::PoseStamped & start,
+    const geometry_msgs::msg::PoseStamped & goal
+)
 {
     std::vector<std::pair<int,int>> explore_directions = {
         {-1, 0},{1, 0},{0, -1},{0, 1}
     };
     std::priority_queue<GraphNode, std::vector<GraphNode>, std::greater<GraphNode>> pending_nodes;
     std::vector<GraphNode> visited_nodes;
-    GraphNode goal_node = worldToGrid(goal);
-    GraphNode start_node = worldToGrid(start);
+    GraphNode goal_node = worldToGrid(goal.pose);
+    GraphNode start_node = worldToGrid(start.pose);
     start_node.heuristic = manhattanDistance(start_node, goal_node);
     pending_nodes.push(start_node);
     GraphNode active_node;
@@ -79,7 +52,7 @@ nav_msgs::msg::Path AStarPlanner::plan(const geometry_msgs::msg::Pose & start, c
         active_node = pending_nodes.top();
         pending_nodes.pop(); //clear first point
         // Goal found!
-        if(worldToGrid(goal) == active_node){
+        if(worldToGrid(goal.pose) == active_node){
             break;
         }
         // Explore neighbors
@@ -87,26 +60,24 @@ nav_msgs::msg::Path AStarPlanner::plan(const geometry_msgs::msg::Pose & start, c
             GraphNode new_node = active_node + dir;
             // Check if the new position is within bounds and not an obstacle
             if(std::find(visited_nodes.begin(), visited_nodes.end(), new_node) == visited_nodes.end() &&
-                poseOnMap(new_node) && map_->data.at(poseToCell(new_node)) < 99 && map_->data.at(poseToCell(new_node)) >=0)
+                poseOnMap(new_node) && costmap_->getCost(new_node.x, new_node.y)< 99)
                 {
-                    new_node.cost = active_node.cost + 1 + map_->data.at(poseToCell(new_node));
+                    new_node.cost = active_node.cost + 1 + costmap_->getCost(new_node.x, new_node.y);
                     new_node.heuristic = manhattanDistance(new_node, goal_node);
                     new_node.prev = std::make_shared<GraphNode>(active_node);
                     pending_nodes.push(new_node);
                     visited_nodes.push_back(new_node);
                 }
         }
-        visited_map_.data.at(poseToCell(active_node)) = -106; //orange color
-        map_pub_->publish(visited_map_);
     }
 
     nav_msgs::msg::Path path;
-    path.header.frame_id = map_->header.frame_id;
+    path.header.frame_id = global_frame_;
     while(active_node.prev && rclcpp::ok())
     {
         geometry_msgs::msg::Pose last_pose = gridToWorld(active_node);;
         geometry_msgs::msg::PoseStamped last_pose_stamped;
-        last_pose_stamped.header.frame_id = map_->header.frame_id;
+        last_pose_stamped.header.frame_id = global_frame_;
         last_pose_stamped.pose = last_pose;
         path.poses.push_back(last_pose_stamped);
         active_node = *active_node.prev;
@@ -114,6 +85,27 @@ nav_msgs::msg::Path AStarPlanner::plan(const geometry_msgs::msg::Pose & start, c
     }
 
     std::reverse(path.poses.begin(), path.poses.end());
+    //Smooth Path
+    if(smooth_client_->action_server_is_ready()){
+        nav2_msgs::action::SmoothPath::Goal path_smooth;
+        path_smooth.path = path;
+        path_smooth.check_for_collisions = false;
+        path_smooth.smoother_id = "simple_smoother";
+        path_smooth.max_smoothing_duration.sec = 10;
+        auto future = smooth_client_->async_send_goal(path_smooth);
+        if(future.wait_for(std::chrono::seconds(3)) == std::future_status::ready){
+            auto goal_handle = future.get();
+            if(goal_handle){
+                auto result_future = smooth_client_->async_get_result(goal_handle);
+                if(result_future.wait_for(std::chrono::seconds(3)) == std::future_status::ready){
+                    auto result_path = result_future.get();
+                    if(result_path.code == rclcpp_action::ResultCode::SUCCEEDED){
+                        path = result_path.result->path;
+                    }
+                }
+            }
+        }
+    }
     return path;
 }
 
@@ -124,33 +116,27 @@ double AStarPlanner::manhattanDistance(const GraphNode & node, const GraphNode &
 
 GraphNode AStarPlanner::worldToGrid(const geometry_msgs::msg::Pose & pose)
 {
-    int grid_x = static_cast<int> ((pose.position.x - map_->info.origin.position.x) / map_->info.resolution);
-    int grid_y = static_cast<int> ((pose.position.y - map_->info.origin.position.y) / map_->info.resolution);
+    int grid_x = static_cast<int> ((pose.position.x - costmap_->getOriginX()) / costmap_->getResolution());
+    int grid_y = static_cast<int> ((pose.position.y - costmap_->getOriginY()) / costmap_->getResolution());
     return GraphNode(grid_x, grid_y);
 }
 bool AStarPlanner::poseOnMap(const GraphNode & node)
 {
-    return node.x >= 0 && node.x < static_cast<int> (map_->info.width) && 
-        node.y >= 0 && node.y < static_cast<int>(map_->info.height);
+    return node.x >= 0 && node.x < static_cast<int> (costmap_->getSizeInCellsX()) && 
+        node.y >= 0 && node.y < static_cast<int>(costmap_->getSizeInCellsY());
 }
 unsigned int AStarPlanner::poseToCell(const GraphNode & node)
 {
-    return node.y * map_->info.width + node.x;
+    return node.y * costmap_->getSizeInCellsX() + node.x;
 }
 geometry_msgs::msg::Pose AStarPlanner::gridToWorld(const GraphNode & node)
 {
     geometry_msgs::msg::Pose pose;
-    pose.position.x = node.x * map_->info.resolution + map_->info.origin.position.x;
-    pose.position.y = node.y * map_->info.resolution + map_->info.origin.position.y;
+    pose.position.x = node.x * costmap_->getResolution() + costmap_->getOriginX();
+    pose.position.y = node.y * costmap_->getResolution() + costmap_->getOriginY();
     return pose;
 }
 }
+#include "pluginlib/class_list_macros.hpp"
 
-int main(int argc, char ** argv)
-{
-    rclcpp::init(argc, argv);
-    auto node = std::make_shared<bumperbot_planning::AStarPlanner>();
-    rclcpp::spin(node);
-    rclcpp::shutdown();
-    return 0;
-}
+PLUGINLIB_EXPORT_CLASS(bumperbot_planning::AStarPlanner, nav2_core::GlobalPlanner)
