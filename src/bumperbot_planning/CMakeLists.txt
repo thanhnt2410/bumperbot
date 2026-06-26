@@ -22,7 +22,7 @@ find_package(pluginlib REQUIRED)
 include_directories(include)
 
 add_library(dijkstra_planner SHARED src/dijkstra_planner.cpp)
-ament_target_dependencies(dijkstra_planner rclcpp rclpy nav_msgs geometry_msgs tf2_ros nav2_core nav2_costmap_2d nav2_util pluginlib)
+ament_target_dependencies(dijkstra_planner rclcpp rclpy nav_msgs geometry_msgs tf2_ros nav2_core nav2_costmap_2d nav2_util pluginlib nav2_msgs)
 
 add_library(a_star_planner SHARED src/a_star_planner.cpp)
 ament_target_dependencies(a_star_planner rclcpp rclpy nav_msgs geometry_msgs tf2_ros nav2_core nav2_costmap_2d nav2_util pluginlib)

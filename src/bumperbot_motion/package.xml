@@ -16,6 +16,10 @@
   <depend>nav_msgs</depend>
   <depend>tf2_ros</depend>
   <depend>tf2_geometry_msgs</depend>
+  <depend>nav2_core</depend>
+  <depend>nav2_costmap_2d</depend>
+  <depend>nav2_util</depend>
+  <depend>pluginlib</depend>
 
   <exec_depend>tf_transformations</exec_depend>
 
@@ -24,5 +28,6 @@
 
   <export>
     <build_type>ament_cmake</build_type>
+    <nav2_core plugin="${prefix}/motion_planner_plugins.xml"/>
   </export>
 </package>
