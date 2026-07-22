@@ -34,6 +34,17 @@ def generate_launch_description():
             "use_python": "False"
         }.items(),
     )
+
+    ekf_localization = IncludeLaunchDescription(
+        os.path.join(
+            get_package_share_directory("bumperbot_localization"),
+            "launch",
+            "ekf_localization.launch.py"
+        ),
+        launch_arguments={
+            "use_sim_time": "True"
+        }.items(),
+    )
     
     joystick = IncludeLaunchDescription(
         os.path.join(
@@ -130,6 +141,7 @@ def generate_launch_description():
         period=2.0,
         actions=[
             controller,
+            ekf_localization,
             joystick,
             safety_stop,
             localization,

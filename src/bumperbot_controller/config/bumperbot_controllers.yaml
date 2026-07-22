@@ -38,7 +38,8 @@ bumperbot_controller:
     base_frame_id: base_footprint
     publish_limited_velocity: true
     publish_wheel_data: true
-    enable_odom_tf: true
+    # enable_odom_tf: true
+    enable_odom_tf: false #EKF will publish odom->base_footprint tf, so disable this to avoid conflict
 
     linear:
       x:

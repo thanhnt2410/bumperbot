@@ -50,6 +50,10 @@ def generate_launch_description():
         "use_simple_controller",
         default_value="True",
     )
+    use_noisy_controller_arg = DeclareLaunchArgument(
+        "use_noisy_controller",
+        default_value="False",
+    )
     use_python_arg = DeclareLaunchArgument(
         "use_python",
         default_value="False",
@@ -73,6 +77,7 @@ def generate_launch_description():
     
     use_sim_time = LaunchConfiguration("use_sim_time")
     use_simple_controller = LaunchConfiguration("use_simple_controller")
+    use_noisy_controller = LaunchConfiguration("use_noisy_controller")
     use_python = LaunchConfiguration("use_python")
     wheel_radius = LaunchConfiguration("wheel_radius")
     wheel_separation = LaunchConfiguration("wheel_separation")
@@ -134,12 +139,16 @@ def generate_launch_description():
         ]
     )
 
-    noisy_controller_launch = OpaqueFunction(function=noisy_controller)
+    noisy_controller_launch = GroupAction(
+        condition=IfCondition(use_noisy_controller),
+        actions=[OpaqueFunction(function=noisy_controller)],
+    )
 
     return LaunchDescription(
         [
             use_sim_time_arg,
             use_simple_controller_arg,
+            use_noisy_controller_arg,
             use_python_arg,
             wheel_radius_arg,
             wheel_separation_arg,
