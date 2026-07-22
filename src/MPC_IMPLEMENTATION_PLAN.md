@@ -413,10 +413,10 @@ Từ chối cấu hình không hợp lệ trong `configure()`:
 
 ## Điều kiện hoàn thành Process 4
 
-- [ ] Không có command vượt giới hạn cấu hình.
-- [ ] Acceleration bound đúng cả khi robot đang chạy rồi đổi controller/path.
-- [ ] Speed limit động có hiệu lực và reset đúng.
-- [ ] Configure thất bại rõ ràng với parameter không hợp lệ.
+- [x] Không có command vượt giới hạn cấu hình.
+- [x] Acceleration bound đúng cả khi robot đang chạy rồi đổi controller/path.
+- [x] Speed limit động có hiệu lực và reset đúng.
+- [x] Configure thất bại rõ ràng với parameter không hợp lệ.
 
 ---
 

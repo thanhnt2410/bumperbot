@@ -55,7 +55,7 @@ controller_server:
       plugin: "bumperbot_motion::MPCController"
       prediction_horizon: 10
       time_step: 0.05
-      reference_linear_velocity: 0.15
+      reference_linear_velocity: 0.30
       goal_distance_tolerance: 0.25
       goal_yaw_tolerance: 0.25
       rotate_to_path_enter_angle: 0.785
@@ -63,7 +63,7 @@ controller_server:
       goal_angular_gain: 1.5
       goal_position_hysteresis: 0.05
       min_linear_velocity: 0.0
-      max_linear_velocity: 0.20
+      max_linear_velocity: 0.30
       max_angular_velocity: 0.8
       max_linear_acceleration: 0.5
       max_angular_acceleration: 2.0

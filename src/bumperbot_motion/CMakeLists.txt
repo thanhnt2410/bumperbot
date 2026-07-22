@@ -9,6 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
@@ -84,6 +85,10 @@ if(BUILD_TESTING)
   ament_add_gtest(test_reference_trajectory
     test/test_reference_trajectory.cpp src/reference_trajectory.cpp)
   ament_target_dependencies(test_reference_trajectory geometry_msgs nav_msgs tf2 tf2_geometry_msgs)
+  ament_add_gtest(test_mpc_controller test/test_mpc_controller.cpp)
+  target_link_libraries(test_mpc_controller mpc_controller)
+  ament_target_dependencies(test_mpc_controller
+    rclcpp rclcpp_lifecycle geometry_msgs nav_msgs tf2_ros nav2_core nav2_costmap_2d)
 
   find_package(ament_lint_auto REQUIRED)
   set(ament_cmake_copyright_FOUND TRUE)
@@ -93,7 +98,7 @@ endif()
 
 ament_export_include_directories(include)
 ament_export_dependencies(
-  rclcpp geometry_msgs nav_msgs tf2_ros tf2_geometry_msgs nav2_core
+  rclcpp rclcpp_lifecycle geometry_msgs nav_msgs tf2_ros tf2_geometry_msgs nav2_core
   nav2_costmap_2d nav2_util pluginlib Eigen3 osqp_vendor std_msgs)
 ament_export_libraries(pd_motion_planner pure_pursuit mpc_controller)
 ament_package()

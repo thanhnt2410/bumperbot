@@ -126,6 +126,28 @@ TEST(MPCSolver, velocity_and_acceleration_bounds_hold_for_entire_solution)
   }
 }
 
+TEST(MPCSolver, changed_reference_uses_measured_velocity_for_first_rate_bound)
+{
+  bumperbot_motion::MPCSolver solver;
+  bumperbot_motion::MPCLimits limits;
+  const Eigen::Vector2d measured_velocity(0.19, 0.30);
+  auto changed_reference = straightReference(0.05);
+  for (auto & point : changed_reference) {
+    point.angular_velocity = -0.10;
+  }
+  const auto result = solver.solve(
+    Eigen::Vector3d(0.10, 0.05, 0.10), changed_reference, measured_velocity,
+    kDt, bumperbot_motion::MPCWeights{}, limits);
+
+  ASSERT_TRUE(result.solved) << result.status;
+  EXPECT_LE(
+    std::abs(result.control[0] - measured_velocity[0]),
+    limits.max_linear_acceleration * kDt + 2e-4);
+  EXPECT_LE(
+    std::abs(result.control[1] - measured_velocity[1]),
+    limits.max_angular_acceleration * kDt + 2e-4);
+}
+
 TEST(MPCSolver, terminal_prediction_reduces_tracking_error)
 {
   bumperbot_motion::MPCSolver solver;
@@ -192,4 +214,32 @@ TEST(MPCSolver, nan_and_invalid_inputs_fail_safely)
   EXPECT_TRUE(nan_result.control.allFinite());
   EXPECT_TRUE(reference_result.control.allFinite());
   EXPECT_TRUE(empty_result.control.allFinite());
+}
+
+TEST(MPCSolver, invalid_limits_weights_and_settings_fail_safely)
+{
+  bumperbot_motion::MPCSolver solver;
+  bumperbot_motion::MPCLimits invalid_limits;
+  invalid_limits.max_linear_acceleration = 0.0;
+  bumperbot_motion::MPCWeights invalid_weights;
+  invalid_weights.control[0] = -1.0;
+  bumperbot_motion::MPCSolverSettings invalid_settings;
+  invalid_settings.absolute_tolerance = 0.0;
+
+  const auto limits_result = solver.solve(
+    Eigen::Vector3d::Zero(), straightReference(), Eigen::Vector2d::Zero(), kDt,
+    bumperbot_motion::MPCWeights{}, invalid_limits);
+  const auto weights_result = solver.solve(
+    Eigen::Vector3d::Zero(), straightReference(), Eigen::Vector2d::Zero(), kDt,
+    invalid_weights, bumperbot_motion::MPCLimits{});
+  const auto settings_result = solver.solve(
+    Eigen::Vector3d::Zero(), straightReference(), Eigen::Vector2d::Zero(), kDt,
+    bumperbot_motion::MPCWeights{}, bumperbot_motion::MPCLimits{}, invalid_settings);
+
+  EXPECT_FALSE(limits_result.solved);
+  EXPECT_FALSE(weights_result.solved);
+  EXPECT_FALSE(settings_result.solved);
+  EXPECT_EQ(limits_result.status, "invalid MPC input");
+  EXPECT_EQ(weights_result.status, "invalid MPC input");
+  EXPECT_EQ(settings_result.status, "invalid MPC input");
 }

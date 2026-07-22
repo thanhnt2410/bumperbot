@@ -34,7 +34,7 @@ public:
     const geometry_msgs::msg::PoseStamped & robot_pose,
     int horizon, double time_step, double reference_velocity,
     double current_linear_velocity, double max_linear_acceleration,
-    double max_angular_velocity);
+    double max_linear_velocity, double max_angular_velocity);
 
 private:
   void preparePlan(const nav_msgs::msg::Path & plan);

@@ -20,10 +20,30 @@ MPCResult MPCSolver::solve(
   MPCResult result;
 
   // Kiểm tra dữ liệu đầu vào trước khi dựng ma trận.
-  if (reference.size() < 2U || dt <= 0.0 || !initial_error.allFinite() ||
+  const bool valid_limits =
+    std::isfinite(limits.min_linear_velocity) &&
+    std::isfinite(limits.max_linear_velocity) &&
+    std::isfinite(limits.max_angular_velocity) &&
+    std::isfinite(limits.max_linear_acceleration) &&
+    std::isfinite(limits.max_angular_acceleration) &&
+    limits.min_linear_velocity <= limits.max_linear_velocity &&
+    limits.max_angular_velocity > 0.0 &&
+    limits.max_linear_acceleration > 0.0 &&
+    limits.max_angular_acceleration > 0.0;
+  const bool valid_weights =
+    weights.state.allFinite() && weights.terminal.allFinite() &&
+    weights.control.allFinite() && weights.control_rate.allFinite() &&
+    weights.state.minCoeff() >= 0.0 && weights.terminal.minCoeff() >= 0.0 &&
+    weights.control.minCoeff() >= 0.0 && weights.control_rate.minCoeff() >= 0.0;
+  const bool valid_settings =
+    solver_settings.max_iterations > 0 &&
+    std::isfinite(solver_settings.absolute_tolerance) &&
+    std::isfinite(solver_settings.relative_tolerance) &&
+    solver_settings.absolute_tolerance > 0.0 && solver_settings.relative_tolerance > 0.0;
+  if (reference.size() < 2U || !std::isfinite(dt) || dt <= 0.0 ||
+    !initial_error.allFinite() ||
     !current_velocity.allFinite() || solver_settings.max_iterations <= 0 ||
-    !weights.state.allFinite() || !weights.terminal.allFinite() ||
-    !weights.control.allFinite() || !weights.control_rate.allFinite())
+    !valid_limits || !valid_weights || !valid_settings)
   {
     result.status = "invalid MPC input";
     return result;

@@ -129,6 +129,7 @@ std::vector<ReferencePoint> ReferenceTrajectory::generate(
   return generate(
     plan, robot_pose, horizon, time_step, reference_velocity,
     reference_velocity, std::numeric_limits<double>::infinity(),
+    std::numeric_limits<double>::infinity(),
     std::numeric_limits<double>::infinity());
 }
 
@@ -136,10 +137,14 @@ std::vector<ReferencePoint> ReferenceTrajectory::generate(
   const nav_msgs::msg::Path & plan, const geometry_msgs::msg::PoseStamped & robot_pose,
   int horizon, double time_step, double reference_velocity,
   double current_linear_velocity, double max_linear_acceleration,
-  double max_angular_velocity)
+  double max_linear_velocity, double max_angular_velocity)
 {
   std::vector<ReferencePoint> result;
-  if (plan.poses.empty() || horizon < 1 || time_step <= 0.0) {
+  if (plan.poses.empty() || horizon < 1 || !std::isfinite(time_step) || time_step <= 0.0 ||
+    !std::isfinite(reference_velocity) || !std::isfinite(current_linear_velocity) ||
+    std::isnan(max_linear_acceleration) || std::isnan(max_linear_velocity) ||
+    std::isnan(max_angular_velocity))
+  {
     return result;
   }
   if (source_plan_.poses.size() != plan.poses.size() || arc_lengths_.size() != plan.poses.size()) {
@@ -214,7 +219,9 @@ std::vector<ReferencePoint> ReferenceTrajectory::generate(
     point.curvature = interpolate(curvatures_, sample_s);
 
     const double remaining = std::max(0.0, arc_lengths_.back() - sample_s);
-    double target_velocity = std::max(0.0, reference_velocity);
+    const double linear_velocity_limit = std::isfinite(max_linear_velocity) ?
+      std::max(0.0, max_linear_velocity) : std::numeric_limits<double>::infinity();
+    double target_velocity = std::min(std::max(0.0, reference_velocity), linear_velocity_limit);
     double curvature_velocity_limit = std::numeric_limits<double>::infinity();
     if (std::isfinite(max_angular_velocity) && std::abs(point.curvature) > 1e-6) {
       curvature_velocity_limit = max_angular_velocity / std::abs(point.curvature);
@@ -229,8 +236,9 @@ std::vector<ReferencePoint> ReferenceTrajectory::generate(
         std::max(0.0, previous_velocity - maximum_change),
         previous_velocity + maximum_change);
     }
-    // Angular velocity là hard reference limit; nếu cần phải ưu tiên giảm v.
-    target_velocity = std::min(target_velocity, curvature_velocity_limit);
+    // Speed filter và angular velocity đều là hard reference limits.
+    target_velocity = std::min(
+      target_velocity, std::min(linear_velocity_limit, curvature_velocity_limit));
     if (remaining <= 1e-9) {
       target_velocity = 0.0;
     }

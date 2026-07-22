@@ -2,6 +2,7 @@
 #define BUMPERBOT_MOTION__MPC_CONTROLLER_HPP_
 
 #include <memory>
+#include <mutex>
 #include <string>
 
 #include "geometry_msgs/msg/twist_stamped.hpp"
@@ -53,7 +54,14 @@ private:
   geometry_msgs::msg::TwistStamped rotationCommand(
     const geometry_msgs::msg::PoseStamped & robot_pose,
     const geometry_msgs::msg::Twist & velocity,
-    double yaw_error) const;
+    double yaw_error, const MPCLimits & limits) const;
+  Eigen::Vector2d clampCommand(
+    const Eigen::Vector2d & desired, const Eigen::Vector2d & current,
+    const MPCLimits & limits) const;
+  void validateParameters() const;
+  bool runtimeInputValid(
+    const geometry_msgs::msg::PoseStamped & robot_pose,
+    const geometry_msgs::msg::Twist & velocity) const;
   void publishDebugPaths(
     const std::vector<ReferencePoint> & reference,
     const MPCResult & result,
@@ -73,6 +81,7 @@ private:
   MPCWeights weights_;
   MPCLimits limits_;
   MPCLimits configured_limits_;
+  mutable std::mutex limits_mutex_;
   int horizon_{10};
   double time_step_{0.05};
   double reference_velocity_{0.15};
@@ -82,6 +91,8 @@ private:
   double rotate_to_path_exit_angle_{0.35};
   double goal_angular_gain_{1.5};
   double goal_position_hysteresis_{0.05};
+  mutable rclcpp::Time last_pose_stamp_{0, 0, RCL_ROS_TIME};
+  mutable bool has_last_pose_stamp_{false};
   ControlState control_state_{ControlState::ROTATE_TO_PATH};
 };
 

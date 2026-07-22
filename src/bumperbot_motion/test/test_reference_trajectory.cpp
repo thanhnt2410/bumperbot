@@ -245,7 +245,7 @@ TEST(ReferenceTrajectory, speed_profile_respects_acceleration_and_brakes_near_go
   geometry_msgs::msg::PoseStamped robot;
   robot.pose.position.x = 0.0;
   const auto accelerating = generator.generate(
-    path, robot, 5, 0.05, 0.15, 0.0, 0.5, 0.8);
+    path, robot, 5, 0.05, 0.15, 0.0, 0.5, 0.20, 0.8);
 
   ASSERT_EQ(accelerating.size(), 6U);
   EXPECT_NEAR(accelerating.front().linear_velocity, 0.025, 1e-9);
@@ -258,7 +258,7 @@ TEST(ReferenceTrajectory, speed_profile_respects_acceleration_and_brakes_near_go
   generator.reset();
   robot.pose.position.x = 0.99;
   const auto braking = generator.generate(
-    path, robot, 5, 0.05, 0.15, 0.15, 0.5, 0.8);
+    path, robot, 5, 0.05, 0.15, 0.15, 0.5, 0.20, 0.8);
   ASSERT_FALSE(braking.empty());
   EXPECT_LT(braking.front().linear_velocity, 0.15);
 }
@@ -280,7 +280,7 @@ TEST(ReferenceTrajectory, curvature_profile_limits_angular_velocity)
   robot.pose = path.poses.front().pose;
   bumperbot_motion::ReferenceTrajectory generator;
   const auto reference = generator.generate(
-    path, robot, 10, 0.05, 0.15, 0.15, 0.5, 0.20);
+    path, robot, 10, 0.05, 0.15, 0.15, 0.5, 0.15, 0.20);
 
   ASSERT_EQ(reference.size(), 11U);
   bool speed_was_reduced = false;
@@ -289,6 +289,29 @@ TEST(ReferenceTrajectory, curvature_profile_limits_angular_velocity)
     EXPECT_LE(std::abs(point.angular_velocity), 0.20 + 1e-6);
   }
   EXPECT_TRUE(speed_was_reduced);
+}
+
+TEST(ReferenceTrajectory, dynamic_linear_speed_limit_caps_entire_profile)
+{
+  nav_msgs::msg::Path path;
+  path.header.frame_id = "odom";
+  for (int i = 0; i <= 100; ++i) {
+    geometry_msgs::msg::PoseStamped pose;
+    pose.pose.position.x = 0.01 * static_cast<double>(i);
+    pose.pose.orientation.w = 1.0;
+    path.poses.push_back(pose);
+  }
+  geometry_msgs::msg::PoseStamped robot;
+  robot.pose.orientation.w = 1.0;
+  bumperbot_motion::ReferenceTrajectory generator;
+  const auto reference = generator.generate(
+    path, robot, 10, 0.05, 0.15, 0.05, 0.5, 0.05, 0.8);
+
+  ASSERT_EQ(reference.size(), 11U);
+  for (const auto & point : reference) {
+    EXPECT_LE(point.linear_velocity, 0.05 + 1e-9);
+  }
+  EXPECT_NEAR(reference.front().linear_velocity, 0.05, 1e-9);
 }
 
 TEST(ReferenceTrajectory, endpoint_orientation_stays_aligned_with_path)
