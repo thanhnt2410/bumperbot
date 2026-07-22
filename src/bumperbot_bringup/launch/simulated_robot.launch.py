@@ -4,7 +4,7 @@ from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
 from launch.conditions import UnlessCondition, IfCondition
 from ament_index_python.packages import get_package_share_directory
 from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import Node
+from launch_ros.actions import Node, RosTimer, SetUseSimTime
 
 
 def generate_launch_description():
@@ -80,10 +80,16 @@ def generate_launch_description():
     rviz = Node(
         package="rviz2",
         executable="rviz2",
+        # arguments=["-d", os.path.join(
+        #     get_package_share_directory("nav2_bringup"),
+        #     "rviz",
+        #     "nav2_default_view.rviz"
+        # )],
+
         arguments=["-d", os.path.join(
-            get_package_share_directory("nav2_bringup"),
+            get_package_share_directory("bumperbot_localization"),
             "rviz",
-            "nav2_default_view.rviz"
+            "global_localization.rviz"
         )],
         output="screen",
         parameters=[{"use_sim_time": True}],
@@ -117,17 +123,27 @@ def generate_launch_description():
 
 
     
+    # Gazebo phải xuất /clock ổn định trước khi các node dùng simulation time
+    # tạo TF buffer. Nếu khởi động đồng thời, clock chuyển từ wall time về gần
+    # zero sẽ làm RViz reset và xóa toàn bộ display.
+    start_after_clock = RosTimer(
+        period=2.0,
+        actions=[
+            controller,
+            joystick,
+            safety_stop,
+            localization,
+            slam,
+            navigation,
+            rviz,
+        ]
+    )
+
     return LaunchDescription([
         use_slam_arg,
-
+        SetUseSimTime(True),
         gazebo,
-        controller,
-        joystick,
-        safety_stop,
-        localization,
-        slam,
-        navigation,
-        rviz,
+        start_after_clock,
         # rviz_localization,
         # rviz_slam,
     ])

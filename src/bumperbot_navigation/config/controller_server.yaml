@@ -7,7 +7,7 @@ controller_server:
     min_theta_velocity_treshold: 0.001
     failure_tolerance: 0.3
     odom_topic: /bumperbot_controller/odom 
-    controller_plugins: ["FollowPath"]
+    controller_plugins: ["FollowPath", "MPC"]
     goal_checker_plugins: ["general_goal_checker"]
     progress_checker_plugins: "progress_checker"
 
@@ -50,6 +50,30 @@ controller_server:
       cost_scaling_dist: 0.3
       cost_scaling_gain: 1.0
       inflation_cost_scaling_factor: 3.0
+
+    MPC:
+      plugin: "bumperbot_motion::MPCController"
+      prediction_horizon: 10
+      time_step: 0.05
+      reference_linear_velocity: 0.15
+      goal_distance_tolerance: 0.25
+      goal_yaw_tolerance: 0.25
+      rotate_to_path_enter_angle: 0.785
+      rotate_to_path_exit_angle: 0.35
+      goal_angular_gain: 1.5
+      goal_position_hysteresis: 0.05
+      min_linear_velocity: 0.0
+      max_linear_velocity: 0.20
+      max_angular_velocity: 0.8
+      max_linear_acceleration: 0.5
+      max_angular_acceleration: 2.0
+      q_x: 10.0
+      q_y: 20.0
+      q_yaw: 5.0
+      r_v: 0.5
+      r_omega: 0.2
+      rd_v: 2.0
+      rd_omega: 0.5
 
     # PurePursuit:
     #   plugin: "bumperbot_motion::PurePursuit"

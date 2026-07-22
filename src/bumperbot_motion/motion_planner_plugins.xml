@@ -7,4 +7,9 @@
         <class type="bumperbot_motion::PurePursuit" base_class_type="nav2_core::Controller">
         </class>
     </library>
+    <library path="mpc_controller">
+        <class type="bumperbot_motion::MPCController" base_class_type="nav2_core::Controller">
+            <description>Linear time-varying model predictive path tracking controller.</description>
+        </class>
+    </library>
 </class_libraries>

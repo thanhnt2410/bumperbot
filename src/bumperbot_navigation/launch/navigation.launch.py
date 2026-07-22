@@ -10,6 +10,9 @@ from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
 
+    navigation_share = get_package_share_directory("bumperbot_navigation")
+    behavior_tree_dir = os.path.join(navigation_share, "behavior_tree")
+
     use_sim_time_arg = DeclareLaunchArgument(
         "use_sim_time",
         default_value="True"
@@ -25,7 +28,7 @@ def generate_launch_description():
         output="screen",
         parameters=[
             os.path.join(
-                get_package_share_directory("bumperbot_navigation"),
+                navigation_share,
                 "config",
                 "controller_server.yaml"
             ),
@@ -40,7 +43,7 @@ def generate_launch_description():
         output="screen",
         parameters=[
             os.path.join(
-                get_package_share_directory("bumperbot_navigation"),
+                navigation_share,
                 "config",
                 "planner_server.yaml"
             ),
@@ -55,7 +58,7 @@ def generate_launch_description():
         output="screen",
         parameters=[
             os.path.join(
-                get_package_share_directory("bumperbot_navigation"),
+                navigation_share,
                 "config",
                 "smoother_server.yaml"
             ),
@@ -70,11 +73,21 @@ def generate_launch_description():
         output="screen",
         parameters=[
             os.path.join(
-                get_package_share_directory("bumperbot_navigation"),
+                navigation_share,
                 "config",
                 "bt_navigator.yaml"
             ),
-            {"use_sim_time": use_sim_time}
+            {
+                "use_sim_time": use_sim_time,
+                "default_nav_to_pose_bt_xml": os.path.join(
+                    behavior_tree_dir,
+                    "simple_navigation_w_replanning.xml"
+                ),
+                "default_nav_through_poses_bt_xml": os.path.join(
+                    behavior_tree_dir,
+                    "simple_navigation.xml"
+                )
+            }
         ]
     )
 
@@ -85,7 +98,7 @@ def generate_launch_description():
         output="screen",
         parameters=[
             os.path.join(
-                get_package_share_directory("bumperbot_navigation"),
+                navigation_share,
                 "config",
                 "behavior_server.yaml"
             ),

@@ -5,7 +5,7 @@
       <RateController hz="1">
         <ComputePathToPose goal="{goal}" planner_id="GridBased" path="{path}"/>
       </RateController>
-      <FollowPath controller_id="FollowPath" path="{path}"/>
+      <FollowPath controller_id="MPC" path="{path}"/>
     </PipelineSequence>
   </BehaviorTree>
 </root>
