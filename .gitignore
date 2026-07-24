@@ -9,3 +9,4 @@ src/log/
 .vscode
 **/__pycache__/
 *.pyc
+src/*.md
