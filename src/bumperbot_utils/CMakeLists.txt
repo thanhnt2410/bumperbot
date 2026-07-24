@@ -26,6 +26,11 @@ install(TARGETS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+install(
+  DIRECTORY config
+  DESTINATION share/${PROJECT_NAME}
+)
+
 install(PROGRAMS
   ${PROJECT_NAME}/safety_stop.py
   DESTINATION lib/${PROJECT_NAME}

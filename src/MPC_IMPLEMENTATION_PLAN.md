@@ -454,11 +454,16 @@ Không tự động xoay tại chỗ nếu chuyển động xoay chưa được 
 
 ## Điều kiện hoàn thành Process 5
 
-- [ ] Robot dừng trước vật cản tĩnh trên predicted path.
-- [ ] Không bỏ lọt vật cản nằm giữa hai predicted poses.
-- [ ] Collision kéo dài dẫn tới replan/recovery thay vì zero command vô hạn.
-- [ ] Rotate và goal alignment cũng được collision-check.
-- [ ] Không deadlock khi đọc costmap.
+- [x] Robot dừng trước vật cản tĩnh trên predicted path.
+- [x] Không bỏ lọt vật cản nằm giữa hai predicted poses.
+- [x] Collision kéo dài dẫn tới controller failure thay vì zero command vô hạn.
+- [x] Rotate và goal alignment cũng được collision-check.
+- [x] Không deadlock khi đọc costmap.
+- [ ] Behavior tree đang chạy có recovery tường minh sau controller failure.
+
+Controller hiện ném `PlannerException` khi collision kéo dài. Behavior tree
+`simple_navigation_w_replanning.xml` có replanning định kỳ nhưng không có
+`RecoveryNode`, vì vậy controller failure vẫn có thể làm navigation goal abort.
 
 ---
 
@@ -466,20 +471,76 @@ Không tự động xoay tại chỗ nếu chuyển động xoay chưa được 
 
 ## Mục tiêu
 
-Giảm allocation, giảm thời gian giải và bảo đảm controller đáp ứng ổn định ở 20 Hz.
+Giảm allocation, giảm thời gian giải và bảo đảm controller đáp ứng ổn định ở 20 Hz,
+đặc biệt khi dùng horizon `N = 30` hoặc thử nghiệm `N = 40`.
+
+## Phạm vi đã chốt
+
+- Giữ mô hình unicycle, QP tuyến tính và OSQP hiện tại.
+- Học cách tái sử dụng solver và warm-start từ Racing-LMPC, không chuyển sang
+  CasADi, IPOPT, mô hình xe đua hoặc Learning MPC.
+- Không thay đổi hành vi collision safety đã hoàn thành ở Process 5.
+- Thực hiện thành các bước nhỏ; mỗi lần sửa không quá 100 dòng code và phải
+  giải thích toàn bộ phần thay đổi.
 
 ## Công việc
 
-### 6.1. Tái sử dụng OSQP workspace
+### 6.1. Đo baseline trước khi tối ưu
+
+- Đo solve time, callback time, số iteration và solver status khi `N = 30`.
+- Dùng cùng path và điều kiện Gazebo để kết quả trước/sau có thể so sánh.
+- Ghi riêng lần solve đầu tiên và các chu kỳ ổn định.
+
+Baseline Gazebo với goal thẳng 3 m, `N = 30`, `dt = 0.05 s`:
+
+- Mẫu đầu: solve `0.456 ms`, callback `3.167 ms`, `100` iterations.
+- Cửa sổ 1: solve mean/P95/max `0.182/0.334/0.685 ms`;
+  callback `1.166/1.668/3.167 ms`; iterations `44.8/75/100`.
+- Cửa sổ 2: solve mean/P95/max `0.222/0.457/1.091 ms`;
+  callback `1.094/1.516/2.042 ms`; iterations `53.5/75/200`.
+- Cả hai cửa sổ có `0/100` solver failure và navigation goal thành công.
+
+### 6.2. Tái sử dụng OSQP workspace
 
 - Cố định sparsity pattern theo horizon.
 - Chỉ gọi `osqp_setup()` khi configure hoặc khi cấu trúc bài toán thay đổi.
 - Mỗi chu kỳ cập nhật `q`, `l`, `u` và các giá trị cần thiết trong `A/P`.
 - Dùng `osqp_update_lin_cost`, `osqp_update_bounds`, `osqp_update_A` hoặc `osqp_update_P_A`.
-- Shift nghiệm chu kỳ trước một bước rồi warm-start.
 - Quản lý OSQP workspace bằng RAII.
 
-### 6.2. Giảm chi phí tính toán
+Kết quả sau khi tái sử dụng workspace và tắt warm-start, cùng goal thẳng 3 m:
+
+- Mẫu đầu vẫn phải setup: solve `0.381 ms`, callback `2.569 ms`, `100` iterations.
+- Cửa sổ 1: solve mean/P95/max `0.154/0.204/0.381 ms`;
+  callback `1.053/1.364/2.569 ms`; iterations `50.8/50/100`.
+- Cửa sổ 2: solve mean/P95/max `0.146/0.181/0.299 ms`;
+  callback `1.009/1.331/1.498 ms`; iterations `47.0/50/50`.
+- Cả hai cửa sổ có `0/100` solver failure và navigation goal thành công.
+
+### 6.3. Warm-start — không triển khai
+
+Controller được thiết kế cho reference path có thể thay đổi do Nav2 replanning.
+Dịch trực tiếp nghiệm trong hệ sai số của path cũ không phù hợp với path mới.
+Path-aware warm-start cần chuyển predicted poses và absolute controls sang hệ
+sai số mới, làm tăng độ phức tạp trong khi solve P95 sau workspace reuse chỉ
+khoảng `0.2 ms`.
+
+Vì vậy không lưu hoặc shift nghiệm cũ. Tiếp tục dùng OSQP workspace reuse và
+để solver giải bài toán mới từ dữ liệu reference hiện tại. Chỉ xem xét lại
+path-aware warm-start nếu benchmark path thay đổi cho thấy iteration hoặc solve
+time vượt tiêu chí.
+
+Kiểm thử path thay đổi khi robot đang chạy:
+
+- Nav2 nhận hai goal preemption cách nhau khoảng `0.51 s` simulation time.
+- Goal thứ hai hoàn thành với action status `SUCCEEDED`.
+- Hai cửa sổ sau preemption có solve P95 `0.442/0.425 ms`, callback P95
+  `1.871/1.844 ms`, iterations P95 `125/100` và `0/100` solver failure.
+- Workspace tiếp tục được reuse; không có `osqp_setup/update` failure.
+- Điều kiện kiểm thử dùng map mặc định `small_house/map.yaml`; Gazebo dùng
+  `empty.world`, nên kết quả phản ánh path do bản đồ `small_house` lập ra.
+
+### 6.4. Giảm chi phí tính toán
 
 - Preallocate Eigen vectors/matrices.
 - Tránh tạo publisher/message hoặc container lớn không cần thiết mỗi chu kỳ.
@@ -487,14 +548,14 @@ Giảm allocation, giảm thời gian giải và bảo đảm controller đáp �
 - Chỉ transform/cắt phần path cần cho local horizon.
 - Tránh log mỗi chu kỳ khi controller hoạt động bình thường.
 
-### 6.3. Solver timeout và fallback
+### 6.5. Solver timeout và fallback
 
 - Đặt `max_iter`, tolerance và time limit thích hợp.
 - Phân biệt `solved`, `solved inaccurate`, `max iterations`, `infeasible` và lỗi setup.
 - Chỉ chấp nhận nghiệm approximate nếu residual nằm trong ngưỡng an toàn.
 - Khi solver lỗi, không tái sử dụng mù quáng command cũ.
 
-### 6.4. Tiêu chí timing
+### 6.6. Tiêu chí timing và quyết định horizon
 
 Ở controller frequency 20 Hz:
 
@@ -513,19 +574,37 @@ control period               = 50 ms
 - Tỷ lệ solver failure.
 - Số deadline miss.
 
-Chỉ tăng horizon từ `N = 10` lên `N = 15` hoặc `N = 20` sau khi timing còn đủ margin.
+Sau khi tối ưu, benchmark `N = 30` và `N = 40` trên cùng kịch bản. Chỉ chọn
+`N = 40` làm mặc định nếu cải thiện khả năng dự đoán/độ mượt và vẫn đạt toàn bộ
+timing requirement; không tăng horizon chỉ để giống cấu hình Racing-LMPC.
+
+## Thứ tự thực hiện
+
+1. Thêm thống kê timing/iteration và lấy baseline `N = 30`.
+2. Tách vòng đời OSQP workspace khỏi hàm solve và tái sử dụng workspace.
+3. Hoàn thành kiểm thử workspace reuse khi reference path thay đổi; không warm-start.
+4. Benchmark `N = 30` so với `N = 40`, rồi chốt horizon mặc định.
 
 ## Điều kiện hoàn thành Process 6
 
-- [ ] Không setup/free OSQP workspace ở mỗi chu kỳ.
+Trạng thái: phần tối ưu hiệu năng và kiểm chứng định lượng còn lại được tạm
+hoãn. Các mục này sẽ được thực hiện sau các chức năng điều khiển quan trọng.
+
+- [x] Có baseline và kết quả workspace reuse trên cùng kịch bản `N = 30`.
+- [x] Không setup/free OSQP workspace ở mỗi chu kỳ.
 - [ ] Không có memory leak trong chạy dài.
 - [ ] Đạt tiêu chí P95 timing trên máy chạy Gazebo.
 - [ ] Không có deadline miss kéo dài.
-- [ ] Warm start giảm iteration hoặc solve time có thể đo được.
+- [x] Không triển khai warm-start; quyết định được ghi lại cùng lý do.
+- [ ] Có kết luận bằng số liệu để giữ `N = 30` hoặc chuyển sang `N = 40`.
 
 ---
 
-# Process 7 — Tuning và so sánh với PD/Pure Pursuit
+# Process 7 — Tuning và so sánh với PD/Pure Pursuit — tạm hoãn
+
+Trạng thái: tạm hoãn theo quyết định hiện tại vì chưa cần benchmark ba
+controller. Process này chưa hoàn thành nhưng không chặn việc đánh giá các mục
+Process 8 có nhu cầu thực tế.
 
 ## Mục tiêu
 
@@ -577,22 +656,128 @@ Mỗi lần chỉ thay đổi một nhóm tham số và lưu kết quả để s
 
 ---
 
-# Process 8 — Các tối ưu nâng cao, thực hiện khi thật sự cần
+# Process 8 — Các chức năng MPC nâng cao
 
-Process này không thuộc MVP và chỉ thực hiện sau khi Process 1–7 ổn định.
+Ưu tiên trước các phần tối ưu/benchmark đang tạm hoãn vì cost-aware MPC bổ sung
+khả năng điều khiển còn thiếu: đưa thông tin vật cản vào quá trình chọn nghiệm.
+
+Trạng thái hiện tại: Process 8.1 và 8.2 đã triển khai, build và unit test thành
+công. MPC đã có thể đánh lái tránh obstacle và một số chu kỳ solve lần hai tạo
+được predicted trajectory collision-free. Robot chưa vượt obstacle ổn định
+trong toàn bộ navigation run nên Process 8 chưa hoàn thành.
+
+Thứ tự ưu tiên hiện tại:
+
+1. Process 8.1: cost-aware MPC.
+2. Process 8.2: slack cho obstacle constraint nếu cần tránh QP infeasible.
+3. Process 8.4: dynamic parameter tuning.
+4. Process 8.3: model nâng cao chỉ khi mô hình unicycle không đủ.
 
 ## 8.1. Cost-aware MPC
 
-- Thêm obstacle/costmap cost vào objective.
-- Hoặc thêm linearized obstacle-distance constraints.
-- Đánh giá lại tính convex và khả năng giữ bài toán dưới dạng QP.
-- Có slack variables để tránh infeasible cứng.
+- [x] Lấy normalized cost và world gradient tại các pose tuyến tính hóa.
+- [x] Truyền obstacle sample vào solver và chuyển gradient sang hệ sai số MPC.
+- [x] Đưa obstacle gradient vào objective QP.
+- [x] Thêm weight/giới hạn hợp lệ cho obstacle cost.
+- [x] Probe hai phía để tìm fallback gradient khi gradient cục bộ gần bằng 0.
+- [x] Giữ footprint collision check của Process 5 làm lớp safety cuối.
+- [x] Unit test xác nhận gradient đẩy predicted trajectory khỏi phía cost cao
+  và lateral probe phục hồi được gradient trên vùng cost cục bộ phẳng.
+
+### 8.1.1. Tái tuyến tính hóa khi nghiệm đầu collision
+
+- [x] Solve lần đầu với cost và gradient lấy trên reference poses.
+- [x] Collision-check predicted footprint của nghiệm đầu.
+- [x] Khi collision, lấy lại cost và gradient trên predicted poses.
+- [x] Lưu `linearization_error` và `linearization_yaw` cho mỗi obstacle sample.
+- [x] Dùng affine offset `cost(e) = cost_sample + gradient * (e - e_sample)`.
+- [x] Solve lần hai và collision-check lại trước khi xuất command.
+- [x] Unit test xác nhận hai điểm tuyến tính hóa biểu diễn cùng affine cost.
+
+Gazebo đã xác nhận nhánh này chạy và có chu kỳ nghiệm đầu collision nhưng nghiệm
+thứ hai collision-free. Tuy nhiên một lần relinearization chưa đủ tạo quỹ đạo
+an toàn ổn định ở mọi chu kỳ.
 
 ## 8.2. Soft constraints
+
+- [x] Thêm một obstacle slack không âm cho mỗi bước dự đoán tương lai.
+- [x] Thêm quadratic penalty và trả slack trong `MPCResult`.
+- [x] Nối slack vào linearized obstacle constraint.
+- [x] Unit test xác nhận cost phẳng vượt limit dùng slack nhưng QP vẫn feasible,
+  và gradient hữu ích làm giảm tổng slack.
+
+Kết quả thử nghiệm cho thấy `obstacle_slack_weight = 1000` có thể làm OSQP chạm
+`maximum iterations`; tiếp tục giữ giá trị mặc định `100` hiện tại.
 
 - Thêm slack cho tracking hoặc một số safety margin phù hợp.
 - Phạt slack đủ lớn nhưng không làm bài toán mất điều kiện số.
 - Không biến hard physical limits thành soft constraint nếu gây mất an toàn.
+
+## Baseline và công việc tiếp theo của Process 8
+
+- MPC giữ `N = 30`, `dt = 0.05 s` và vận tốc tham chiếu `0.30 m/s`.
+- Local costmap dùng `inflation_radius = 0.35 m`; global planner giữ `0.55 m`.
+- Kịch bản Gazebo chuẩn dùng map `small_house`.
+- Test hiện tại: MPC solver `16/16`, collision `5/5`, controller `4/4`.
+- Solver hiện là QP lồi dùng OSQP. Warm-start cùng một QP không tự phá được
+  đối xứng; nếu cần phá đối xứng phải thay objective hoặc điểm tuyến tính hóa.
+- Controller đã có chọn/khóa phía, xoay tại chỗ, đi ngang, vượt obstacle và nối
+  lại global path. Chuỗi này được giữ làm fallback có cấu trúc.
+- Dead zone đối xứng vẫn có thể xuất hiện trước khi fallback được kích hoạt.
+- Chưa triển khai nhiều candidate reference trái/phải.
+
+### 8.1.2. Side-preference bias để phá đối xứng
+
+Mục tiêu của bước kế tiếp là cho QP một tín hiệu nhỏ để chọn phía sớm, trước khi
+robot đứng gần như yên và chuyển sang fallback. Chưa tăng horizon trong thí
+nghiệm này để có thể tách riêng tác dụng của side-bias.
+
+Luồng điều khiển dự kiến:
+
+```text
+Obstacle nằm trên horizon
+    |
+So sánh cost trái/phải và khóa phía ít cost hơn
+    |
+MPC tracking + side-bias theo phía đã khóa
+    |
+Solve lần 1 -> relinearize và solve lần 2 nếu cần
+    |
+Nếu vẫn collision hoặc không tiến triển -> structured avoidance fallback
+```
+
+Quy tắc triển khai:
+
+- [ ] Thêm linear cost nhỏ trên `e_y` để phá nghiệm đối xứng.
+- [ ] Dấu của bias phải theo quy ước sai số hiện tại: LEFT làm predicted
+  `e_y < 0`, RIGHT làm predicted `e_y > 0`.
+- [ ] Tăng bias dần theo prediction step để tránh làm giật command đầu tiên.
+- [ ] Chỉ áp dụng bias tại obstacle sample có cost vượt activation threshold.
+- [ ] Truyền cùng hướng đã khóa vào cả solve lần đầu và solve tái tuyến tính hóa.
+- [ ] Khóa phía trước khi bộ đếm dead zone đạt ngưỡng fallback.
+- [ ] Chỉ mở khóa sau nhiều chu kỳ liên tiếp không còn obstacle; không mở khóa
+  khi structured avoidance đang chạy.
+- [ ] Giữ collision check, obstacle slack và structured avoidance làm fallback.
+
+### Thứ tự kiểm chứng
+
+1. Chốt baseline bằng build và toàn bộ unit test liên quan với cấu hình trên.
+2. Thêm side-bias vào solver và tham số controller, mỗi lần sửa dưới 100 dòng.
+3. Thêm unit test cho LEFT, RIGHT và trường hợp cost thấp không kích hoạt bias.
+4. Chạy lại test solver, reference trajectory, controller và collision.
+5. Chạy Gazebo cùng RViz GUI trên `small_house`, đặt obstacle nhỏ trên global
+   path và lưu log/predicted path để so sánh với baseline.
+6. Xác nhận robot chọn một phía ổn định, vượt hoàn toàn obstacle, nối lại global
+   path và không bị dead zone hoặc abort.
+7. Chỉ tuning nhẹ side-bias và activation threshold sau khi hành vi đúng.
+
+### Điểm quyết định sau thí nghiệm
+
+- Nếu side-bias đạt tiêu chí, giữ `N = 30` và đo timing trước/sau.
+- Nếu side-bias chưa đủ, ghi lại chu kỳ thất bại và tạo regression test.
+- Sau đó mới chọn giữa tăng `N` cùng phạm vi local costmap hoặc giải hai
+  candidate trái/phải; không thay đồng thời horizon, costmap và objective.
+- Chỉ tune `q_y`, obstacle weight, slack và inflation sau khi kiến trúc né ổn định.
 
 ## 8.3. Model nâng cao
 
@@ -627,11 +812,11 @@ Process 4: Nav2 compatibility và dynamic speed limits
     |
 Process 5: Collision safety bằng local costmap
     |
-Process 6: OSQP workspace reuse, warm start và timing
+Process 6: Đã reuse OSQP; tạm hoãn tối ưu và kiểm chứng còn lại
     |
-Process 7: Tuning + benchmark PD/Pure Pursuit/MPC
+Process 7: Tạm hoãn tuning + benchmark PD/Pure Pursuit/MPC
     |
-Process 8: Cost-aware/soft constraints/model nâng cao nếu cần
+Process 8: Ưu tiên cost-aware MPC, sau đó mới xét các phần nâng cao khác
 ```
 
 ---
@@ -640,13 +825,13 @@ Process 8: Cost-aware/soft constraints/model nâng cao nếu cần
 
 MPC chỉ được coi là hoàn thành khi:
 
-- [ ] Build và test thành công trên ROS 2 Humble.
-- [ ] Nav2 load/unload plugin ổn định.
-- [ ] Chạy được các path thẳng, cua 90 độ và chữ S trong Gazebo.
-- [ ] Tuân thủ velocity/acceleration bounds.
-- [ ] Dừng và căn đúng goal tolerance.
-- [ ] Predicted path được collision-check.
-- [ ] Solver failure có fallback an toàn.
+- [x] Build và functional test thành công trên ROS 2 Humble.
+- [x] Nav2 load/unload plugin ổn định.
+- [x] Chạy được các path thẳng, cua 90 độ và chữ S trong Gazebo trống.
+- [x] Tuân thủ velocity/acceleration bounds.
+- [x] Dừng và căn đúng goal tolerance.
+- [x] Predicted path được collision-check.
+- [x] Solver failure có fallback an toàn.
 - [ ] Đạt timing requirement ở 20 Hz.
 - [ ] Có benchmark định lượng với PD và Pure Pursuit.
 - [ ] Không có memory leak hoặc crash trong bài chạy dài.

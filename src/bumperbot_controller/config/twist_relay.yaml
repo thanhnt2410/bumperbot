@@ -1,0 +1,3 @@
+twist_relay:
+  ros__parameters:
+    safety_slowdown_factor: 0.35

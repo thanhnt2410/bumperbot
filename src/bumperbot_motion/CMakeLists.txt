@@ -89,6 +89,9 @@ if(BUILD_TESTING)
   target_link_libraries(test_mpc_controller mpc_controller)
   ament_target_dependencies(test_mpc_controller
     rclcpp rclcpp_lifecycle geometry_msgs nav_msgs tf2_ros nav2_core nav2_costmap_2d)
+  ament_add_gtest(test_mpc_collision test/test_mpc_collision.cpp)
+  target_link_libraries(test_mpc_collision mpc_controller)
+  ament_target_dependencies(test_mpc_collision geometry_msgs nav2_core nav2_costmap_2d)
 
   find_package(ament_lint_auto REQUIRED)
   set(ament_cmake_copyright_FOUND TRUE)

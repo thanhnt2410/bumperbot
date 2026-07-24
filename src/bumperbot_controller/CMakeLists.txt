@@ -29,7 +29,7 @@ add_executable(noisy_controller src/noisy_controller.cpp)
 ament_target_dependencies(noisy_controller rclcpp geometry_msgs std_msgs sensor_msgs nav_msgs tf2 tf2_ros)
 
 add_executable(twist_relay src/twist_relay.cpp)
-ament_target_dependencies(twist_relay rclcpp geometry_msgs)
+ament_target_dependencies(twist_relay rclcpp geometry_msgs std_msgs)
 
 install(
   DIRECTORY include

@@ -13,8 +13,8 @@ controller_server:
 
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
-      required_movement_radius: 0.5
-      movement_time_allowance: 10.0
+      required_movement_radius: 0.1
+      movement_time_allowance: 15.0
 
     general_goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
@@ -53,7 +53,7 @@ controller_server:
 
     MPC:
       plugin: "bumperbot_motion::MPCController"
-      prediction_horizon: 10
+      prediction_horizon: 30
       time_step: 0.05
       reference_linear_velocity: 0.30
       goal_distance_tolerance: 0.25
@@ -74,6 +74,17 @@ controller_server:
       r_omega: 0.2
       rd_v: 2.0
       rd_omega: 0.5
+      obstacle_cost_weight: 2.0
+      obstacle_slack_weight: 100.0
+      obstacle_cost_limit: 0.5
+      side_preference_cost: 0.2
+      side_preference_activation_cost: 0.5
+      side_preference_clear_cycles: 10
+      collision_cost_threshold: 253
+      consider_unknown_as_obstacle: true
+      consider_outside_costmap_as_obstacle: true
+      collision_failure_cycles: 10
+      collision_failure_timeout: 1.0
 
     # PurePursuit:
     #   plugin: "bumperbot_motion::PurePursuit"
@@ -106,7 +117,7 @@ local_costmap:
 
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        inflation_radius: 0.55
+        inflation_radius: 0.35
         cost_scaling_factor: 3.0
 
       obstacle_layer:

@@ -81,7 +81,7 @@ def generate_launch_description():
                 "use_sim_time": use_sim_time,
                 "default_nav_to_pose_bt_xml": os.path.join(
                     behavior_tree_dir,
-                    "simple_navigation_w_replanning.xml"
+                    "simple_navigation.xml"
                 ),
                 "default_nav_through_poses_bt_xml": os.path.join(
                     behavior_tree_dir,

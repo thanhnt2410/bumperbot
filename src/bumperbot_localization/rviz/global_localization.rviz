@@ -7,12 +7,12 @@ Panels:
         - /Global Options1
         - /Map1
         - /ParticleCloud1/Topic1
-        - /Global Planning1
+        - /Path1
+        - /Path2
         - /Global Planning1/Map1
-        - /Global Planning1/Path1
         - /Controller1
         - /Controller1/Map1
-        - /ParticleCloud2
+        - /ParticleCloud2/Status1
         - /ParticleCloud2/Topic1
       Splitter Ratio: 0.5
     Tree Height: 446
@@ -182,7 +182,7 @@ Visualization Manager:
     - Alpha: 1
       Buffer Length: 1
       Class: rviz_default_plugins/Path
-      Color: 25; 255; 0
+      Color: 28; 113; 216
       Enabled: true
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
@@ -210,7 +210,7 @@ Visualization Manager:
     - Alpha: 1
       Buffer Length: 1
       Class: rviz_default_plugins/Path
-      Color: 25; 255; 0
+      Color: 255; 25; 0
       Enabled: true
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
@@ -388,25 +388,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 18.682964324951172
+      Distance: 4.96428108215332
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.5274743437767029
-        Y: -0.24978938698768616
-        Z: 1.0842499732971191
+        X: -1.544871211051941
+        Y: 1.0852046012878418
+        Z: 0.8257631063461304
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5697963237762451
+      Pitch: 1.4097964763641357
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.5653865337371826
+      Yaw: 1.70038640499115
     Saved: ~
 Window Geometry:
   Displays:
@@ -424,5 +424,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1200
-  X: 356
-  Y: 44
+  X: 133
+  Y: 58

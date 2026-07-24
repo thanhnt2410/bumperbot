@@ -1,0 +1,6 @@
+safety_stop_node:
+  ros__parameters:
+    danger_distance: 0.2
+    warning_distance: 0.6
+    scan_topic: scan
+    safety_slowdown_topic: safety_slowdown

@@ -23,18 +23,20 @@ public:
     declare_parameter<double>("danger_distance", 0.2);
     declare_parameter<double>("warning_distance", 0.6);
     declare_parameter<std::string>("scan_topic", "scan");
-    declare_parameter<std::string>("safety_stop_topic", "safety_stop");
+    declare_parameter<std::string>("safety_slowdown_topic", "safety_slowdown");
     danger_distance_ = get_parameter("danger_distance").as_double();
     warning_distance_ = get_parameter("warning_distance").as_double();
     std::string scan_topic_ = get_parameter("scan_topic").as_string();
-    std::string safety_stop_topic_ = get_parameter("safety_stop_topic").as_string();
+    std::string safety_slowdown_topic =
+      get_parameter("safety_slowdown_topic").as_string();
 
     state_ = State::FREE;
     prev_state_ = State::FREE;
     is_first_msg_ = true;
 
     laser_sub_ = create_subscription<sensor_msgs::msg::LaserScan>(scan_topic_, 10, std::bind(&SafetyStop::laserCallback, this, std::placeholders::_1));
-    safety_stop_pub_ = create_publisher<std_msgs::msg::Bool>(safety_stop_topic_, 10);
+    safety_slowdown_pub_ =
+      create_publisher<std_msgs::msg::Bool>(safety_slowdown_topic, 10);
     zones_pub_ = create_publisher<visualization_msgs::msg::MarkerArray>("zones", 10);
     
     decrease_speed_client_ = rclcpp_action::create_client<twist_mux_msgs::action::JoyTurbo>(this, "joy_turbo_decrease");
@@ -79,7 +81,7 @@ private:
   State state_, prev_state_;
   visualization_msgs::msg::MarkerArray zones_;
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr laser_sub_;
-  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr safety_stop_pub_;
+  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr safety_slowdown_pub_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr zones_pub_;
   rclcpp_action::Client<twist_mux_msgs::action::JoyTurbo>::SharedPtr decrease_speed_client_;
   rclcpp_action::Client<twist_mux_msgs::action::JoyTurbo>::SharedPtr increase_speed_client_;
@@ -99,25 +101,25 @@ private:
         }
     }
     if(state_ != prev_state_){
-      std_msgs::msg::Bool is_safety_stop;
+      std_msgs::msg::Bool is_safety_slowdown;
       if(state_ == State::WARNING){
-          is_safety_stop.data = false;
+          is_safety_slowdown.data = true;
           zones_.markers.at(0).color.a = 1.0;
           zones_.markers.at(1).color.a = 0.5;
           decrease_speed_client_->async_send_goal(twist_mux_msgs::action::JoyTurbo::Goal());
       }else if(state_ == State::DANGER){
-        is_safety_stop.data = true;
+        is_safety_slowdown.data = true;
         zones_.markers.at(0).color.a = 1.0;
         zones_.markers.at(1).color.a = 1.0;
       }else if(state_ == State::FREE){
-          is_safety_stop.data = false;
+          is_safety_slowdown.data = false;
           zones_.markers.at(0).color.a = 0.5;
           zones_.markers.at(1).color.a = 0.5;
           increase_speed_client_->async_send_goal(twist_mux_msgs::action::JoyTurbo::Goal());
       }
 
       prev_state_ = state_;
-      safety_stop_pub_->publish(is_safety_stop);
+      safety_slowdown_pub_->publish(is_safety_slowdown);
     }
     if(is_first_msg_){
       for(auto &zone: zones_.markers){

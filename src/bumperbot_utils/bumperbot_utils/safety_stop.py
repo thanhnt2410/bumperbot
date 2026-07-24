@@ -23,15 +23,17 @@ class SafetyStop(Node):
         self.declare_parameter("danger_distance", 0.2)
         self.declare_parameter("warning_distance", 0.6)
         self.declare_parameter("scan_topic", "scan")
-        self.declare_parameter("safety_stop_topic", "safety_stop")
+        self.declare_parameter("safety_slowdown_topic", "safety_slowdown")
         self.danger_distance = self.get_parameter("danger_distance").get_parameter_value().double_value
         self.warning_distance = self.get_parameter("warning_distance").get_parameter_value().double_value
         self.scan_topic = self.get_parameter("scan_topic").get_parameter_value().string_value
-        self.safety_stop_topic = self.get_parameter("safety_stop_topic").get_parameter_value().string_value
+        self.safety_slowdown_topic = self.get_parameter(
+            "safety_slowdown_topic").get_parameter_value().string_value
         self.zones_pub = self.create_publisher(MarkerArray, "zones", 10)
 
         self.laser_sub = self.create_subscription(LaserScan, self.scan_topic, self.laser_callback, 10)
-        self.safety_stop_pub = self.create_publisher(Bool, self.safety_stop_topic, 10)
+        self.safety_slowdown_pub = self.create_publisher(
+            Bool, self.safety_slowdown_topic, 10)
 
         self.state = State.FREE
         self.prev_state = State.FREE
@@ -80,25 +82,25 @@ class SafetyStop(Node):
                     self.state = State.DANGER
                     break
         if self.state != self.prev_state:
-            is_safety_stop = Bool()
+            is_safety_slowdown = Bool()
             if self.state == State.WARNING:
-                is_safety_stop.data = False
+                is_safety_slowdown.data = True
                 self.zones.markers[0].color.a = 1.0
                 self.zones.markers[1].color.a = 0.5
                 self.decrease_speed_client.send_goal_async(JoyTurbo.Goal())
             elif self.state == State.DANGER:
                 self.zones.markers[0].color.a = 1.0
                 self.zones.markers[1].color.a = 1.0
-                is_safety_stop.data = True
+                is_safety_slowdown.data = True
                 self.prev_state = self.state
             elif self.state == State.FREE:
-                is_safety_stop.data = False
+                is_safety_slowdown.data = False
                 self.zones.markers[0].color.a = 0.5
                 self.zones.markers[1].color.a = 0.5
                 self.increase_speed_client.send_goal_async(JoyTurbo.Goal())
             
             self.prev_state = self.state
-            self.safety_stop_pub.publish(is_safety_stop)
+            self.safety_slowdown_pub.publish(is_safety_slowdown)
 
         if self.is_first_msg:
             for zone in self.zones.markers:
@@ -108,13 +110,10 @@ class SafetyStop(Node):
         self.zones_pub.publish(self.zones)
             
         
-        is_safety_stop = Bool()
-        if self.state == State.DANGER:
-            is_safety_stop.data = True
-        elif self.state == State.FREE:
-            is_safety_stop.data = False
-        
-        self.safety_stop_pub.publish(is_safety_stop)
+        is_safety_slowdown = Bool()
+        is_safety_slowdown.data = self.state != State.FREE
+
+        self.safety_slowdown_pub.publish(is_safety_slowdown)
 
 def main():
     rclpy.init()

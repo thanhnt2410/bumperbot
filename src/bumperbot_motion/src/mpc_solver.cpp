@@ -11,11 +11,41 @@ extern "C" {
 
 namespace bumperbot_motion
 {
+struct MPCSolver::Impl
+{
+  ~Impl()
+  {
+    if (workspace != nullptr) {osqp_cleanup(workspace);}
+  }
+
+  OSQPWorkspace * workspace{nullptr};
+  c_int horizon{0};
+  c_int p_nonzeros{0};
+  c_int a_nonzeros{0};
+  int max_iterations{0};
+  double absolute_tolerance{0.0};
+  double relative_tolerance{0.0};
+};
+
+MPCSolver::MPCSolver()
+: impl_(std::make_unique<Impl>())
+{
+}
+
+MPCSolver::~MPCSolver() = default;
+
+void MPCSolver::reset()
+{
+  impl_ = std::make_unique<Impl>();
+}
+
 // Dựng bài toán QP, gọi OSQP và trả về điều khiển đầu tiên [v, omega].
 MPCResult MPCSolver::solve(
   const Eigen::Vector3d & initial_error, const std::vector<ReferencePoint> & reference,
   const Eigen::Vector2d & current_velocity, double dt, const MPCWeights & weights,
-  const MPCLimits & limits, const MPCSolverSettings & solver_settings) const
+  const MPCLimits & limits, const MPCSolverSettings & solver_settings,
+  const std::vector<MPCObstacleSample> & obstacle_samples,
+  MPCSidePreference side_preference)
 {
   MPCResult result;
 
@@ -29,21 +59,39 @@ MPCResult MPCSolver::solve(
     limits.min_linear_velocity <= limits.max_linear_velocity &&
     limits.max_angular_velocity > 0.0 &&
     limits.max_linear_acceleration > 0.0 &&
-    limits.max_angular_acceleration > 0.0;
+    limits.max_angular_acceleration > 0.0 &&
+    std::isfinite(limits.obstacle_cost_limit) &&
+    limits.obstacle_cost_limit >= 0.0 && limits.obstacle_cost_limit <= 1.0;
   const bool valid_weights =
     weights.state.allFinite() && weights.terminal.allFinite() &&
     weights.control.allFinite() && weights.control_rate.allFinite() &&
     weights.state.minCoeff() >= 0.0 && weights.terminal.minCoeff() >= 0.0 &&
-    weights.control.minCoeff() >= 0.0 && weights.control_rate.minCoeff() >= 0.0;
+    weights.control.minCoeff() >= 0.0 && weights.control_rate.minCoeff() >= 0.0 &&
+    std::isfinite(weights.obstacle_cost) && weights.obstacle_cost >= 0.0 &&
+    std::isfinite(weights.obstacle_slack_weight) && weights.obstacle_slack_weight > 0.0 &&
+    std::isfinite(weights.side_preference_cost) && weights.side_preference_cost >= 0.0 &&
+    std::isfinite(weights.side_preference_activation_cost) &&
+    weights.side_preference_activation_cost >= 0.0 &&
+    weights.side_preference_activation_cost <= 1.0;
   const bool valid_settings =
     solver_settings.max_iterations > 0 &&
     std::isfinite(solver_settings.absolute_tolerance) &&
     std::isfinite(solver_settings.relative_tolerance) &&
     solver_settings.absolute_tolerance > 0.0 && solver_settings.relative_tolerance > 0.0;
+  bool valid_obstacles =
+    obstacle_samples.empty() || obstacle_samples.size() == reference.size();
+  for (const auto & sample : obstacle_samples) {
+    valid_obstacles =
+      valid_obstacles && std::isfinite(sample.cost) &&
+      sample.cost >= 0.0 && sample.cost <= 1.0 &&
+      sample.world_gradient.allFinite() &&
+      sample.linearization_error.allFinite() &&
+      std::isfinite(sample.linearization_yaw);
+  }
   if (reference.size() < 2U || !std::isfinite(dt) || dt <= 0.0 ||
     !initial_error.allFinite() ||
     !current_velocity.allFinite() || solver_settings.max_iterations <= 0 ||
-    !valid_limits || !valid_weights || !valid_settings)
+    !valid_limits || !valid_weights || !valid_settings || !valid_obstacles)
   {
     result.status = "invalid MPC input";
     return result;
@@ -54,14 +102,40 @@ MPCResult MPCSolver::solve(
       return result;
     }
   }
-  // Biến tối ưu gồm e_0...e_N và delta_u_0...delta_u_(N-1).
+  result.obstacle_error_gradients.reserve(obstacle_samples.size());
+  for (std::size_t k = 0; k < obstacle_samples.size(); ++k) {
+    const double yaw = obstacle_samples[k].linearization_yaw;
+    const Eigen::Vector2d & world_gradient =
+      obstacle_samples[k].world_gradient;
+
+    Eigen::Matrix2d world_to_robot_rotation;
+    world_to_robot_rotation <<
+      std::cos(yaw), std::sin(yaw),
+      -std::sin(yaw), std::cos(yaw);
+
+    const Eigen::Vector2d robot_gradient =
+      world_to_robot_rotation * world_gradient;
+    const Eigen::Vector2d obstacle_error_gradient =
+      -robot_gradient;
+
+    result.obstacle_error_gradients.emplace_back(
+      obstacle_error_gradient);
+  }
+  // Biến tối ưu gồm e_0...e_N, delta_u_0...delta_u_(N-1) và slack_1...slack_N.
   const c_int horizon = static_cast<c_int>(reference.size() - 1U);
   const c_int state_count = 3 * (horizon + 1);
-  const c_int variable_count = state_count + 2 * horizon;
+  const c_int control_count = 2 * horizon;
+  const c_int slack_count = horizon;
+  const c_int control_start = state_count;
+  const c_int slack_start = control_start + control_count;
+  const c_int variable_count = slack_start + slack_count;
   const c_int equality_count = 3 * (horizon + 1);
   const c_int control_bound_count = 2 * horizon;
   const c_int rate_count = 2 * horizon;
-  const c_int constraint_count = equality_count + control_bound_count + rate_count;
+  const c_int slack_bound_start = equality_count + control_bound_count + rate_count;
+  const c_int obstacle_constraint_start = slack_bound_start + slack_count;
+  const c_int obstacle_constraint_count = horizon;
+  const c_int constraint_count = obstacle_constraint_start + obstacle_constraint_count;
   std::vector<c_float> linear_cost(variable_count, 0.0);
   // Ma trận P chứa trọng số sai số trạng thái, điều khiển và độ thay đổi điều khiển.
   std::vector<Eigen::Triplet<double, c_int>> p_entries;
@@ -72,6 +146,39 @@ MPCResult MPCSolver::solve(
       c_int state = 3 * k + i;
       p_entries.emplace_back(state, state, 2.0 * weight);
     }
+  }
+  if (!result.obstacle_error_gradients.empty()) {
+    for (c_int prediction_step = 1; prediction_step <= horizon; ++prediction_step) {
+      const std::size_t gradient_index = static_cast<std::size_t>(prediction_step);
+      const Eigen::Vector2d & obstacle_gradient =
+        result.obstacle_error_gradients[gradient_index];
+      const c_int state_offset = 3 * prediction_step;
+      const c_int longitudinal_error_index = state_offset;
+      const c_int lateral_error_index = state_offset + 1;
+      linear_cost[longitudinal_error_index] +=
+        weights.obstacle_cost * obstacle_gradient.x();
+      linear_cost[lateral_error_index] +=
+        weights.obstacle_cost * obstacle_gradient.y();
+    }
+  }
+  if (side_preference != MPCSidePreference::NONE && !obstacle_samples.empty()) {
+    const double side_sign = static_cast<int>(side_preference);
+    for (c_int prediction_step = 1; prediction_step <= horizon; ++prediction_step) {
+      const std::size_t sample_index = static_cast<std::size_t>(prediction_step);
+      if (obstacle_samples[sample_index].cost <= weights.side_preference_activation_cost) {
+        continue;
+      }
+      const double horizon_progress =
+        static_cast<double>(prediction_step) / static_cast<double>(horizon);
+      const c_int lateral_error_index = 3 * prediction_step + 1;
+      linear_cost[lateral_error_index] +=
+        side_sign * weights.side_preference_cost * horizon_progress;
+    }
+  }
+  for (c_int slack_index = 0; slack_index < slack_count; ++slack_index) {
+    const c_int slack_variable = slack_start + slack_index;
+    p_entries.emplace_back(
+      slack_variable, slack_variable, 2.0 * weights.obstacle_slack_weight); //1/2 × zᵀPz
   }
   for (c_int i = 0; i < 2; ++i) {
     for (c_int k = 0; k < horizon; ++k) {
@@ -134,9 +241,8 @@ MPCResult MPCSolver::solve(
     for (c_int i = 0; i < 3; ++i) {
       a_entries.emplace_back(row + i, 3 * (k + 1) + i, 1.0);
       for (c_int j = 0; j < 3; ++j) {
-        if (dynamics(i, j) != 0.0) {
-          a_entries.emplace_back(row + i, 3 * k + j, -dynamics(i, j));
-        }
+        // Giữ cả phần tử zero để sparsity pattern không đổi giữa các chu kỳ.
+        a_entries.emplace_back(row + i, 3 * k + j, -dynamics(i, j));
       }
       for (c_int j = 0; j < 2; ++j) {
         if (input(i, j) != 0.0) {
@@ -174,6 +280,38 @@ MPCResult MPCSolver::solve(
       }
     }
   }
+  for (c_int slack_index = 0; slack_index < slack_count; ++slack_index) {
+    const c_int constraint_row = slack_bound_start + slack_index;
+    const c_int slack_variable = slack_start + slack_index;
+    a_entries.emplace_back(constraint_row, slack_variable, 1.0);
+    lower[constraint_row] = 0.0;
+    upper[constraint_row] = OSQP_INFTY;
+  }
+  for (c_int prediction_step = 1; prediction_step <= horizon; ++prediction_step) {
+    const c_int obstacle_index = prediction_step - 1;
+    const c_int constraint_row = obstacle_constraint_start + obstacle_index;
+    const c_int state_offset = 3 * prediction_step;
+    const c_int slack_variable = slack_start + obstacle_index;
+
+    const bool has_obstacle_sample = !obstacle_samples.empty();
+    const std::size_t sample_index = static_cast<std::size_t>(prediction_step);
+    const Eigen::Vector2d obstacle_gradient = has_obstacle_sample ?
+      result.obstacle_error_gradients[sample_index] : Eigen::Vector2d::Zero();
+    const double sample_cost = has_obstacle_sample ?
+      obstacle_samples[sample_index].cost : 0.0;
+    const Eigen::Vector2d linearization_error = has_obstacle_sample ?
+      obstacle_samples[sample_index].linearization_error :
+      Eigen::Vector2d::Zero();
+    const double linearized_cost_at_zero =
+      sample_cost - obstacle_gradient.dot(linearization_error);
+
+    a_entries.emplace_back(constraint_row, state_offset, obstacle_gradient.x());
+    a_entries.emplace_back(constraint_row, state_offset + 1, obstacle_gradient.y());
+    a_entries.emplace_back(constraint_row, slack_variable, -1.0);
+    lower[constraint_row] = -OSQP_INFTY;
+    upper[constraint_row] = has_obstacle_sample ?
+      limits.obstacle_cost_limit - linearized_cost_at_zero : OSQP_INFTY;
+  }
 
   // Chuyển danh sách phần tử sang ma trận thưa dạng cột mà OSQP cần.
   Eigen::SparseMatrix<double, Eigen::ColMajor, c_int> p_matrix(
@@ -196,16 +334,47 @@ MPCResult MPCSolver::solve(
   data.n = variable_count; data.m = constraint_count; data.P = p; data.A = a;
   data.q = linear_cost.data(); data.l = lower.data(); data.u = upper.data();
   OSQPSettings settings;
-  // Process 1 dựng workspace mới ở mỗi chu kỳ để code đơn giản.
+  // Workspace chỉ được dựng lại khi kích thước hoặc solver settings thay đổi.
   osqp_set_default_settings(&settings);
   settings.verbose = false;
-  settings.warm_start = true;
+  settings.warm_start = false;
   settings.max_iter = solver_settings.max_iterations;
   settings.eps_abs = solver_settings.absolute_tolerance;
   settings.eps_rel = solver_settings.relative_tolerance;
-  OSQPWorkspace * workspace = nullptr;
-  const c_int setup_status = osqp_setup(&workspace, &data, &settings);
-  if (setup_status == 0 && workspace != nullptr) {
+  const bool rebuild =
+    impl_->workspace == nullptr || impl_->horizon != horizon ||
+    impl_->p_nonzeros != p_matrix.nonZeros() ||
+    impl_->a_nonzeros != a_matrix.nonZeros() ||
+    impl_->max_iterations != solver_settings.max_iterations ||
+    impl_->absolute_tolerance != solver_settings.absolute_tolerance ||
+    impl_->relative_tolerance != solver_settings.relative_tolerance;
+  c_int workspace_status = 0;
+  if (rebuild) {
+    reset();
+    workspace_status = osqp_setup(&impl_->workspace, &data, &settings);
+    if (workspace_status == 0) {
+      impl_->horizon = horizon;
+      impl_->p_nonzeros = p_matrix.nonZeros();
+      impl_->a_nonzeros = a_matrix.nonZeros();
+      impl_->max_iterations = solver_settings.max_iterations;
+      impl_->absolute_tolerance = solver_settings.absolute_tolerance;
+      impl_->relative_tolerance = solver_settings.relative_tolerance;
+    }
+  } else {
+    workspace_status = osqp_update_P_A(
+      impl_->workspace, p_matrix.valuePtr(), OSQP_NULL, p_matrix.nonZeros(),
+      a_matrix.valuePtr(), OSQP_NULL, a_matrix.nonZeros());
+    if (workspace_status == 0) {
+      workspace_status = osqp_update_lin_cost(impl_->workspace, linear_cost.data());
+    }
+    if (workspace_status == 0) {
+      workspace_status = osqp_update_bounds(impl_->workspace, lower.data(), upper.data());
+    }
+    result.workspace_reused = workspace_status == 0;
+  }
+
+  OSQPWorkspace * workspace = impl_->workspace;
+  if (workspace_status == 0 && workspace != nullptr) {
     // Giải QP và chấp nhận cả nghiệm chính xác lẫn gần chính xác.
     osqp_solve(workspace);
     result.status = workspace->info->status;
@@ -233,15 +402,20 @@ MPCResult MPCSolver::solve(
         result.control_sequence.emplace_back(
           ref.linear_velocity + delta[0], ref.angular_velocity + delta[1]);
       }
+      result.obstacle_slacks.reserve(static_cast<std::size_t>(slack_count));
+      for (c_int slack_index = 0; slack_index < slack_count; ++slack_index) {
+        result.obstacle_slacks.push_back(
+          workspace->solution->x[slack_start + slack_index]);
+      }
       result.control = result.control_sequence.front();
       result.solved = result.control.allFinite();
       for (const auto & error : result.predicted_errors) {
         result.solved = result.solved && error.allFinite();
       }
     }
-    osqp_cleanup(workspace);
   } else {
-    result.status = "osqp_setup failed: " + std::to_string(setup_status);
+    result.status = std::string(rebuild ? "osqp_setup failed: " : "osqp_update failed: ") +
+      std::to_string(workspace_status);
   }
   // Giải phóng hai wrapper CSC được OSQP tạo ra.
   c_free(p);

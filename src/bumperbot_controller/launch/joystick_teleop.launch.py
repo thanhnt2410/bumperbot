@@ -46,7 +46,10 @@ def generate_launch_description():
         package="bumperbot_controller",
         executable="twist_relay",
         name="twist_relay",
-        parameters=[{"use_sim_time": LaunchConfiguration("use_sim_time")}]
+        parameters=[
+            os.path.join(bumperbot_controller_pkg, "config", "twist_relay.yaml"),
+            {"use_sim_time": LaunchConfiguration("use_sim_time")}
+        ]
     )
     return LaunchDescription([
         use_sim_time_arg,
